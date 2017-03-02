@@ -65,6 +65,12 @@ $('form').submit(function (event) {
   fields.forEach(function (fieldId) {
     data[fieldId] = $('#' + fieldId).val();
   });
+  // if the link is a provider link set the provider ID.
+  // this will be used for us to be able to differentiate multiple link
+  // providers per parent widget.
+  if(Fliplet.Env.get('provider')) {
+    data.provId = $('[data-provider-id]').length ? $('[data-provider-id]')[0].dataset.providerId : null;
+  }
 
   if (data.url && !data.url.match(/^[A-z]+:/i)) {
     data.url = 'http://' + data.url;
@@ -73,7 +79,9 @@ $('form').submit(function (event) {
   // TODO: validate query
 
   Fliplet.Widget.save(data).then(function () {
-    Fliplet.Widget.complete();
+    if(!Fliplet.Env.get('provider')) {
+      Fliplet.Widget.complete();
+    }
   });
 
 });

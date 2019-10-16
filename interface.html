@@ -53,16 +53,39 @@
               </select>
               <span class="icon fa fa-chevron-down"></span>
             </label>
-            <a id="add-query" href="#">Add query parameters</a>
+            <a id="add-action" href="#">Add screen action</a>
           </div>
         </div>
-        <div class="form-group" id="query-form">
-          <div class="col-sm-4 control-label">
-            <label for="query">Add query parameters</label>
+        <div id="screen-action-form">
+          <div class="form-group">
+            <div class="col-sm-4 control-label">
+              <label for="query-action">Screen action</label>
+            </div>
+            <div class="col-sm-8">
+              <label for="query-action" class="select-proxy-display">
+                <select name="query_action" id="query-action" data-label="select" class="hidden-select form-control">
+                  <option selected value="">Select a screen action</option>
+                </select>
+                <span class="icon fa fa-chevron-down"></span>
+              </label>
+            </div>
           </div>
-          <div class="col-sm-8">
-            <input type="text" class="form-control" name="query" id="query" placeholder="Enter query (e.g. ?variable1=value1&variable2=value2)" />
-            <p class="help-block">This needs to be URL encoded - <a target="_blank" href="http://meyerweb.com/eric/tools/dencoder/">URL encoding tool</a></p>
+          <div class="form-group" id="another-field">
+            <div class="col-sm-4 control-label">
+              <label for="another">Accordion title</label>
+            </div>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" name="another" id="another" />
+            </div>
+          </div>
+          <div class="form-group" id="custom-screen-query">
+            <div class="col-sm-4 control-label">
+              <label for="query">Custom query parameters</label>
+            </div>
+            <div class="col-sm-8">
+              <input type="text" class="form-control" name="query" id="query" placeholder="Enter query (e.g. ?variable1=value1&variable2=value2)" />
+              <p class="help-block">This needs to be URL encoded - <a target="_blank" href="http://meyerweb.com/eric/tools/dencoder/">URL encoding tool</a></p>
+            </div>
           </div>
         </div>
         <div class="form-group">

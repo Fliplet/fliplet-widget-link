@@ -36,7 +36,9 @@ body {
   pointer-events: none;
 }
 
-#query-form {
+#screen-action-form,
+#custom-screen-query,
+#screen-form.show-custom-query #another-field {
   height: 0;
   opacity: 0;
   overflow: hidden;
@@ -51,10 +53,12 @@ body {
   transform: translate(0, -10px);
 }
 
-#screen-form.show-query #query-form {
+#screen-form.show-screen-action #screen-action-form,
+#screen-form.show-custom-query #custom-screen-query,
+#another-field {
   display: block;
   opacity: 1;
-  overflow: auto;
+  overflow: visible;
   height: auto;
   margin-bottom: 15px;
   -webkit-transform: translate(0, 0);

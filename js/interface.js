@@ -292,7 +292,7 @@ function save(notifyComplete) {
       data.appData.untouchedData = emailProviderData
       data.appData.body = emailProviderData.html
       data.appData.subject = emailProviderData.subject
-      
+
       // All recipients are found in the "emailProviderData.to" array, but with "type"
       // defining whether they are "to" or "cc" or "bcc" recipients.
       data.appData.to = _.find(emailProviderData.to, function(o) { return o.type === 'to'; }) || '';
@@ -344,7 +344,16 @@ function save(notifyComplete) {
   if (notifyComplete) {
     // TODO: validate query
     Fliplet.Widget.save(data).then(function() {
-      Fliplet.Widget.complete();
+      return Fliplet.Widget.complete();
+    }).catch(function (error) {
+      var message = Fliplet.parseError(error);
+      console.warn(error);
+      Fliplet.Widget.displayMessage({
+        text: message ? message : 'Error saving component settings'
+      });
+      setTimeout(function () {
+        Fliplet.Widget.displayMessage({ text: '' });
+      }, 2000);
     });
   } else {
     Fliplet.Widget.save(data).then(function() {

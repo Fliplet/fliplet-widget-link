@@ -121,6 +121,7 @@ Object.keys(btnSelector).forEach(function(key) {
       Fliplet.Studio.emit('widget-save-label-update', {
         text: 'Save & Close'
       });
+      Fliplet.Widget.emit('file-picker-closed');
       Fliplet.Widget.info('');
       Fliplet.Widget.toggleCancelButton(true);
       Fliplet.Widget.toggleSaveButton(true);
@@ -280,6 +281,7 @@ Fliplet.Widget.onCancelRequest(function() {
     Fliplet.Studio.emit('widget-save-label-update', {
       text: 'Save & Close'
     });
+    Fliplet.Widget.emit('file-picker-closed');
     Fliplet.Widget.toggleCancelButton(true);
     Fliplet.Widget.toggleSaveButton(true);
     Fliplet.Widget.info('');

@@ -218,6 +218,9 @@ $('.video-remove').on('click', function() {
   $('.video .file-title span').text('');
   Fliplet.Widget.autosize();
 });
+$('#page').on('change', function() {
+  Fliplet.Widget.emit('onPageChange', $(this).val());
+});
 
 $.each(externalAppValueMap, function(key) {
   $('#' + externalAppValueMap[key]).on('change input', function() {
@@ -232,6 +235,23 @@ $.each(externalAppValueMap, function(key) {
 
     $(this).siblings('.error-success-message').addClass('text-success').html('✅ URL is valid');
   });
+});
+
+Fliplet.Studio.onMessage(function(event) {
+  if (event.data) {
+    switch (event.data.event) {
+      case 'page-field-error':
+        $('#screen-list').addClass('has-error');
+
+        break;
+      case 'reset-page-field-error':
+        $('#screen-list').removeClass('has-error');
+
+        break;
+      default:
+        break;
+    }
+  }
 });
 
 $('.configureEmailTemplate').on('click', function() {

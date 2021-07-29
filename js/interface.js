@@ -38,6 +38,7 @@ var files = $.extend(widgetInstanceData.files, {
 });
 
 var config = files;
+
 if (files.id) {
   config.selectFiles.push({
     appId: files.appId ? files.appId : undefined,
@@ -68,6 +69,7 @@ Fliplet.Organizations.get().then(function(organizations) {
 
 // Add custom app actions to the html
 var $appAction = $('#appAction');
+
 Object.keys(customAppsList).forEach(function(appName) {
   var app = customAppsList[appName];
 
@@ -76,6 +78,7 @@ Object.keys(customAppsList).forEach(function(appName) {
 
     Object.keys(app.actions).forEach(function(actionName) {
       var action = app.actions[actionName];
+
       $opt.append('<option value="' + appName + '.' + actionName + '">' + action.label + '</option>');
     });
 
@@ -109,7 +112,9 @@ Object.keys(btnSelector).forEach(function(key) {
             break;
           case 'widget-set-info':
             Fliplet.Widget.toggleSaveButton(!!data.length);
+
             var msg = data.length ? data.length + ' files selected' : 'no selected files';
+
             Fliplet.Widget.info(msg);
             break;
           default:
@@ -128,6 +133,7 @@ Object.keys(btnSelector).forEach(function(key) {
       Fliplet.Widget.toggleSaveButton(true);
       files.selectedFiles = data.data.length === 1 ? data.data[0] : data.data;
       providerInstance = null;
+
       if (key === 'document') {
         $('.document .add-document').text('Replace document');
         $('.document .info-holder').removeClass('hidden');
@@ -147,6 +153,7 @@ $(window).on('resize', Fliplet.Widget.autosize);
 
 $('#action').on('change', function onLinkTypeChange() {
   var selectedValue = $(this).val();
+
   $('.section.show').removeClass('show');
   $('#' + selectedValue + 'Section').addClass('show');
 
@@ -230,6 +237,7 @@ $.each(externalAppValueMap, function(key) {
 
     if (!Fliplet.Navigate.Apps.validateInput(key, url)) {
       $(this).siblings('.error-success-message').addClass('text-danger').html('URL isn\'t a valid action. Your app will fail to open this URL.');
+
       return;
     }
 
@@ -283,6 +291,7 @@ Fliplet.Widget.onSaveRequest(function() {
   if (providerInstance) {
     return providerInstance.forwardSaveRequest();
   }
+
   if (emailTemplateAddProvider) {
     return emailTemplateAddProvider.forwardSaveRequest();
   }
@@ -294,8 +303,10 @@ Fliplet.Widget.onCancelRequest(function() {
   if (emailTemplateAddProvider) {
     emailTemplateAddProvider.close();
     emailTemplateAddProvider = null;
+
     return;
   }
+
   if (providerInstance) {
     providerInstance.close();
     providerInstance = null;
@@ -323,6 +334,7 @@ function save(notifyComplete) {
   });
 
   var appAction = $appAction.val();
+
   if (data.action === 'app' && appAction) {
     data.app = appAction;
     data.appData = {};
@@ -344,6 +356,7 @@ function save(notifyComplete) {
       var result;
 
       data.appData.fullUrl = urlValue;
+
       if (appAction === 'gdocs.document' || appAction === 'gdocs.spreadsheet' || appAction === 'gdocs.presentation') {
         result = urlValue.match(/\/d\/([A-z0-9-_]+)/);
         data.appData.id = result.length && result[1];
@@ -402,11 +415,14 @@ function initialiseData() {
     if (widgetInstanceData.action === 'app' && widgetInstanceData.app) {
       $appAction.val(widgetInstanceData.app);
       $appAction.trigger('change');
+
       var url = widgetInstanceData.appData.fullUrl || widgetInstanceData.appData.url;
+
       if (widgetInstanceData.appData && url) {
         $('#' + externalAppValueMap[widgetInstanceData.app]).val(url);
       }
     }
+
     $('.spinner-holder').removeClass('animated');
 
     if (selectDefaultPage) {
@@ -426,7 +442,7 @@ function initialiseData() {
 
 Fliplet.Pages.get()
   .then(function(pages) {
-    var $select = $('#page');
+    var $select = $('#page, #page2');
 
     (pages || []).forEach(function(page) {
       var pageIsOmited = _.some(widgetInstanceData.omitPages, function(omittedPage) {

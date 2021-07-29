@@ -1,5 +1,6 @@
 body {
   overflow: hidden;
+  padding: 10px;
 }
 
 #documentSection,
@@ -7,6 +8,7 @@ body {
 #urlSection,
 #videoSection,
 #appSection,
+#logoutSection,
 .appLinkFields {
   display: none;
 }
@@ -31,7 +33,7 @@ body {
   display: flex !important;
 }
 
-.spinner-holder.animated + .link-wrapper {
+.spinner-holder.animated+.link-wrapper {
   opacity: 0.5;
   pointer-events: none;
 }

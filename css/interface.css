@@ -2,11 +2,7 @@ body {
   overflow: hidden;
 }
 
-#documentSection,
-#screenSection,
-#urlSection,
-#videoSection,
-#appSection,
+section,
 .appLinkFields {
   display: none;
 }

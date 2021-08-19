@@ -3,10 +3,13 @@ var widgetInstanceData = Fliplet.Widget.getData(widgetInstanceId) || {};
 var customAppsList = Fliplet.Navigate.Apps.list();
 var defaultTransitionVal = 'fade';
 var selectDefaultPage = true;
+var $sections = {};
+var optionsValues = {};
 
 var fields = [
   'linkLabel',
   'action',
+  'logoutAction',
   'page',
   'transition',
   'url',
@@ -38,6 +41,7 @@ var files = $.extend(widgetInstanceData.files, {
 });
 
 var config = files;
+
 if (files.id) {
   config.selectFiles.push({
     appId: files.appId ? files.appId : undefined,
@@ -68,6 +72,7 @@ Fliplet.Organizations.get().then(function(organizations) {
 
 // Add custom app actions to the html
 var $appAction = $('#appAction');
+
 Object.keys(customAppsList).forEach(function(appName) {
   var app = customAppsList[appName];
 
@@ -76,6 +81,7 @@ Object.keys(customAppsList).forEach(function(appName) {
 
     Object.keys(app.actions).forEach(function(actionName) {
       var action = app.actions[actionName];
+
       $opt.append('<option value="' + appName + '.' + actionName + '">' + action.label + '</option>');
     });
 
@@ -109,7 +115,9 @@ Object.keys(btnSelector).forEach(function(key) {
             break;
           case 'widget-set-info':
             Fliplet.Widget.toggleSaveButton(!!data.length);
+
             var msg = data.length ? data.length + ' files selected' : 'no selected files';
+
             Fliplet.Widget.info(msg);
             break;
           default:
@@ -128,6 +136,7 @@ Object.keys(btnSelector).forEach(function(key) {
       Fliplet.Widget.toggleSaveButton(true);
       files.selectedFiles = data.data.length === 1 ? data.data[0] : data.data;
       providerInstance = null;
+
       if (key === 'document') {
         $('.document .add-document').text('Replace document');
         $('.document .info-holder').removeClass('hidden');
@@ -145,25 +154,29 @@ Object.keys(btnSelector).forEach(function(key) {
 
 $(window).on('resize', Fliplet.Widget.autosize);
 
-$('#action').on('change', function onLinkTypeChange() {
-  var selectedValue = $(this).val();
-  $('.section.show').removeClass('show');
-  $('#' + selectedValue + 'Section').addClass('show');
+/* Show/hide toggle function for sections on the same level.
+This is important for cases when we have a dropdown with additional sections on the inner levels (i.e logout) */
+function showSection(sectionDataKey, selectId) {
+  optionsValues[selectId].forEach(function(key) {
+    $sections[key] && $sections[key].toggleClass('show', key === sectionDataKey);
+  });
+}
 
+function onChange() {
+  var $element = $(this);
+  var selectedAction = $element.val();
   var fileType = files.contentType ? files.contentType.split('/')[0] : '';
+  var selectId = $element.attr('id');
 
   // this is used to clear uploaded file if user changes link type
-  if (!_.isEmpty(files.selectedFiles) || (selectedValue === 'document' && fileType !== 'application') || (selectedValue === 'video' && fileType !== 'video')) {
-    files.selectedFiles = {};
-    files.selectFiles = [];
+  if (!_.isEmpty(files.selectedFiles) || (selectedAction === 'document' && fileType !== 'application') || (selectedAction === 'video' && fileType !== 'video')) {
+    clearUploadedFiles();
+  }
 
-    var items = ['document', 'video'];
+  showSection(selectedAction, selectId);
 
-    items.forEach(function(item) {
-      $('.' + item + ' .add-' + item).text('Browse your media library');
-      $('.' + item + ' .info-holder').addClass('hidden');
-      $('.' + item + ' .file-title span').text('');
-    });
+  if (selectedAction === 'logout') {
+    $('#logoutAction').trigger('change');
   }
 
   Fliplet.Studio.emit('widget-changed');
@@ -174,7 +187,18 @@ $('#action').on('change', function onLinkTypeChange() {
 
   // Tells the parent widget this provider has changed its interface height
   Fliplet.Widget.autosize();
-});
+}
+
+function clearUploadedFiles() {
+  files.selectedFiles = {};
+  files.selectFiles = [];
+
+  ['document', 'video'].forEach(function(fileType) {
+    $('.' + fileType + ' .add-' + fileType).text('Browse your media library');
+    $('.' + fileType + ' .info-holder').addClass('hidden');
+    $('.' + fileType + ' .file-title span').text('');
+  });
+}
 
 $appAction.on('change', function onAppActionChange() {
   var value = $(this).val();
@@ -185,6 +209,27 @@ $appAction.on('change', function onAppActionChange() {
   $('.' + externalAppValueMap[value]).addClass('show');
   // Tells the parent widget this provider has changed its interface height
   Fliplet.Widget.autosize();
+});
+
+/* Caching all <section> elements to reduce DOM parsing.
+   Each <section> element is hidden by css and connected through [data-key] attribute with specific <option> by value. */
+$('section').each(function(index, element) {
+  var $section = $(element);
+  var sectionDataKey = $section.data('key');
+
+  $sections[sectionDataKey] = $section;
+});
+
+// Caching and grouping all <options> to show and hide their corresponding sections
+$('.action-configurator').each(function(index, element) {
+  var $select = $(element);
+  var selectId = $select.attr('id');
+
+  optionsValues[selectId] = [];
+  $select.find('option').each(function(index, element) {
+    optionsValues[selectId].push($(element).val());
+  });
+  $select.on('change', onChange);
 });
 
 $('#add-query').on('click', function() {
@@ -230,6 +275,7 @@ $.each(externalAppValueMap, function(key) {
 
     if (!Fliplet.Navigate.Apps.validateInput(key, url)) {
       $(this).siblings('.error-success-message').addClass('text-danger').html('URL isn\'t a valid action. Your app will fail to open this URL.');
+
       return;
     }
 
@@ -283,6 +329,7 @@ Fliplet.Widget.onSaveRequest(function() {
   if (providerInstance) {
     return providerInstance.forwardSaveRequest();
   }
+
   if (emailTemplateAddProvider) {
     return emailTemplateAddProvider.forwardSaveRequest();
   }
@@ -294,8 +341,10 @@ Fliplet.Widget.onCancelRequest(function() {
   if (emailTemplateAddProvider) {
     emailTemplateAddProvider.close();
     emailTemplateAddProvider = null;
+
     return;
   }
+
   if (providerInstance) {
     providerInstance.close();
     providerInstance = null;
@@ -323,6 +372,7 @@ function save(notifyComplete) {
   });
 
   var appAction = $appAction.val();
+
   if (data.action === 'app' && appAction) {
     data.app = appAction;
     data.appData = {};
@@ -344,6 +394,7 @@ function save(notifyComplete) {
       var result;
 
       data.appData.fullUrl = urlValue;
+
       if (appAction === 'gdocs.document' || appAction === 'gdocs.spreadsheet' || appAction === 'gdocs.presentation') {
         result = urlValue.match(/\/d\/([A-z0-9-_]+)/);
         data.appData.id = result.length && result[1];
@@ -380,6 +431,10 @@ function save(notifyComplete) {
     }
   });
 
+  if (data.logoutAction && data.action !== 'logout') {
+    delete data['logoutAction'];
+  }
+
   if (notifyComplete) {
     // TODO: validate query
     Fliplet.Widget.save(data).then(function() {
@@ -402,11 +457,14 @@ function initialiseData() {
     if (widgetInstanceData.action === 'app' && widgetInstanceData.app) {
       $appAction.val(widgetInstanceData.app);
       $appAction.trigger('change');
+
       var url = widgetInstanceData.appData.fullUrl || widgetInstanceData.appData.url;
+
       if (widgetInstanceData.appData && url) {
         $('#' + externalAppValueMap[widgetInstanceData.app]).val(url);
       }
     }
+
     $('.spinner-holder').removeClass('animated');
 
     if (selectDefaultPage) {

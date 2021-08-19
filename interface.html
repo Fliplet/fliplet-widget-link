@@ -33,6 +33,7 @@
               <option value="about-overlay">Open the about this app overlay</option>
               <option value="app">Link to an external application</option>
               <option value="exit-app">Return to app list</option>
+              <option value="logout">Log Out</option>
             </select>
             <span class="icon fa fa-chevron-down"></span>
           </label>
@@ -40,7 +41,24 @@
       </div>
     </div>
 
-    <div id="screenSection" class="section">
+    <div id="logoutSection" class="section">
+      <div class="form-group">
+        <div class="col-sm-4 control-label">
+          <label for="logoutAction">After the user is logged out...</label>
+        </div>
+        <div class="col-sm-8">
+          <label for="logoutAction" class="select-proxy-display">
+            <select name="link_type" id="logoutAction" data-label="select" class="hidden-select form-control">
+              <option value="screen">Display another screen</option>
+              <option value="exit-app">Return to app list</option>
+            </select>
+            <span class="icon fa fa-chevron-down"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div id="screenSection" class="section section-child">
       <div id="screen-form">
         <div id="screen-list" class="form-group">
           <div class="col-sm-4 control-label">
@@ -145,7 +163,7 @@
       </div>
     </div>
 
-    <div id="appSection" class="section">
+    <div id="appSection" class="section section-child">
       <div class="form-group">
         <div class="col-sm-4 control-label">
           <label for="appAction">Select the app and action</label>
@@ -220,6 +238,7 @@
         </div>
       </div>
     </div>
+
     <div class="form-group appLinkFields appGoogleChromeWebsite">
       <div class="col-sm-4 control-label">
         <label for="appGoogleChromeWebsite">Enter the URL of the website to open</label>

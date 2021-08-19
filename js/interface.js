@@ -7,6 +7,7 @@ var selectDefaultPage = true;
 var fields = [
   'linkLabel',
   'action',
+  'logoutAction',
   'page',
   'transition',
   'url',
@@ -145,12 +146,25 @@ Object.keys(btnSelector).forEach(function(key) {
 
 $(window).on('resize', Fliplet.Widget.autosize);
 
+function showSection(removeClass, actionValue) {
+  $(removeClass).removeClass('show');
+  $('#' + actionValue + 'Section').addClass('show');
+}
+
+$('#logoutAction').on('change', function onLinkTypeChange() {
+  var selectedValue = $(this).val();
+  showSection('.section-child.show', selectedValue)
+});
+
 $('#action').on('change', function onLinkTypeChange() {
   var selectedValue = $(this).val();
-  $('.section.show').removeClass('show');
-  $('#' + selectedValue + 'Section').addClass('show');
+  showSection('.section.show', selectedValue)
 
   var fileType = files.contentType ? files.contentType.split('/')[0] : '';
+
+  if (selectedValue === 'logout') {
+    $('#logoutAction').trigger('change');
+  }
 
   // this is used to clear uploaded file if user changes link type
   if (!_.isEmpty(files.selectedFiles) || (selectedValue === 'document' && fileType !== 'application') || (selectedValue === 'video' && fileType !== 'video')) {
@@ -379,6 +393,11 @@ function save(notifyComplete) {
       delete data[key];
     }
   });
+
+  
+  if (data.logoutAction && data.action !== 'logout') {
+    delete data['logoutAction']
+  }
 
   if (notifyComplete) {
     // TODO: validate query

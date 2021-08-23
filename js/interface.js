@@ -3,6 +3,10 @@ var widgetInstanceData = Fliplet.Widget.getData(widgetInstanceId) || {};
 var customAppsList = Fliplet.Navigate.Apps.list();
 var defaultTransitionVal = 'fade';
 var selectDefaultPage = true;
+var sectionControl = {
+  section: undefined,
+  supSection: undefined
+}
 
 var fields = [
   'linkLabel',
@@ -146,38 +150,45 @@ Object.keys(btnSelector).forEach(function(key) {
 
 $(window).on('resize', Fliplet.Widget.autosize);
 
-function showSection(removeClass, actionValue) {
-  $(removeClass).removeClass('show');
-  $('#' + actionValue + 'Section').addClass('show');
+function showSection(sectionClass, section) {
+  if (sectionControl[section]) {
+    sectionControl[section].hide();
+  }
+
+  sectionControl[section] = $(sectionClass);
+
+  sectionControl[section].show();
 }
 
-$('#logoutAction').on('change', function onLinkTypeChange() {
-  var selectedValue = $(this).val();
-  showSection('.section-child.show', selectedValue)
+$('#logoutAction').on('change', function() {
+  var selectedAction = $(this).val();
+  showSection('.sup-' + selectedAction + '-section', 'supSection');
 });
 
 $('#action').on('change', function onLinkTypeChange() {
-  var selectedValue = $(this).val();
-  showSection('.section.show', selectedValue)
-
+  var selectedAction = $(this).val();
   var fileType = files.contentType ? files.contentType.split('/')[0] : '';
 
-  if (selectedValue === 'logout') {
+  showSection('.' + selectedAction + '-section', 'section')
+
+  switch(selectedAction){
+    case 'logout':
+      showSection('.action-logout');
+      break;
+    case 'document':
+      if (fileType !== 'application') {
+        clearUploadedFiles();
+      }
+      break;
+    case 'video':
+      if (fileType !== 'video') {
+        clearUploadedFiles();
+      }
+      break;
+  };
+  
+  if (selectedAction === 'logout') {
     $('#logoutAction').trigger('change');
-  }
-
-  // this is used to clear uploaded file if user changes link type
-  if (!_.isEmpty(files.selectedFiles) || (selectedValue === 'document' && fileType !== 'application') || (selectedValue === 'video' && fileType !== 'video')) {
-    files.selectedFiles = {};
-    files.selectFiles = [];
-
-    var items = ['document', 'video'];
-
-    items.forEach(function(item) {
-      $('.' + item + ' .add-' + item).text('Browse your media library');
-      $('.' + item + ' .info-holder').addClass('hidden');
-      $('.' + item + ' .file-title span').text('');
-    });
   }
 
   Fliplet.Studio.emit('widget-changed');
@@ -189,6 +200,21 @@ $('#action').on('change', function onLinkTypeChange() {
   // Tells the parent widget this provider has changed its interface height
   Fliplet.Widget.autosize();
 });
+
+function clearUploadedFiles() {
+  if(!_.isEmpty(files.selectedFiles)) {
+    return;
+  }
+
+  files.selectedFiles = {};
+  files.selectFiles = [];
+
+  ['document', 'video'].forEach(function(fileType) {
+    $('.' + fileType + ' .add-' + fileType).text('Browse your media library');
+    $('.' + fileType + ' .info-holder').addClass('hidden');
+    $('.' + fileType + ' .file-title span').text('');
+  });
+}
 
 $appAction.on('change', function onAppActionChange() {
   var value = $(this).val();

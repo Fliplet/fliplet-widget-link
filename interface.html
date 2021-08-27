@@ -23,7 +23,7 @@
         <div class="col-sm-8">
 
           <label for="action" class="select-proxy-display">
-            <select name="link_type" id="action" data-label="select" class="hidden-select form-control">
+            <select id="action" data-label="select" class="hidden-select form-control action-configurator">
               <option value="none">None</option>
               <option value="screen">Display another screen</option>
               <option value="back">Go back to previous screen</option>
@@ -41,14 +41,14 @@
       </div>
     </div>
 
-    <div id="logoutSection" class="section logout-section">
+    <section id="logoutSection" data-key="logout">
       <div class="form-group">
         <div class="col-sm-4 control-label">
           <label for="logoutAction">After the user is logged out...</label>
         </div>
         <div class="col-sm-8">
           <label for="logoutAction" class="select-proxy-display">
-            <select name="link_type" id="logoutAction" data-label="select" class="hidden-select form-control">
+            <select id="logoutAction" data-label="select" class="hidden-select form-control action-configurator">
               <option value="screen">Display another screen</option>
               <option value="exit-app">Return to app list</option>
             </select>
@@ -56,9 +56,9 @@
           </label>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div id="screenSection" class="section screen-section sup-screen-section">
+    <section id="screenSection" data-key="screen">
       <div id="screen-form">
         <div id="screen-list" class="form-group">
           <div class="col-sm-4 control-label">
@@ -66,7 +66,7 @@
           </div>
           <div class="col-sm-8">
             <label for="page" class="select-proxy-display">
-              <select name="link_screen" id="page" data-label="select" class="hidden-select form-control">
+              <select id="page" data-label="select" class="hidden-select form-control">
                 <option value="none">Select a screen</option>
               </select>
               <span class="icon fa fa-chevron-down"></span>
@@ -112,9 +112,9 @@
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div id="urlSection" class="section url-section">
+    <section id="urlSection" data-key="url">
       <div id="webpage-form">
         <div class="form-group">
           <div class="col-sm-4 control-label">
@@ -125,9 +125,9 @@
           </div>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div id="documentSection" class="section document-section">
+    <section id="documentSection" data-key="document">
       <div class="form-group">
         <div class="col-sm-4 control-label">
           <label for="add-document">Select a document</label>
@@ -143,9 +143,9 @@
           <p class="help-block">Embedded documents will be opened within your app on iOS devices, but will ask to select a file reader on Android devices.</p>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div id="videoSection" class="section video-section">
+    <section id="videoSection" data-key="video">
       <div class="form-group">
         <div class="col-sm-4 control-label">
           <label for="add-document">Select a video</label>
@@ -161,9 +161,9 @@
           <p class="help-block">When the user taps to play the video, it will be displayed within your app using a video player.</p>
         </div>
       </div>
-    </div>
+    </section>
 
-    <div id="appSection" class="section app-section">
+    <section id="appSection" data-key="app">
       <div class="form-group">
         <div class="col-sm-4 control-label">
           <label for="appAction">Select the app and action</label>
@@ -237,7 +237,7 @@
           <div class="btn btn-default configureEmailTemplate">Configure</div>
         </div>
       </div>
-    </div>
+    </section>
 
     <div class="form-group appLinkFields appGoogleChromeWebsite">
       <div class="col-sm-4 control-label">

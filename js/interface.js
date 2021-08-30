@@ -3,6 +3,8 @@ var widgetInstanceData = Fliplet.Widget.getData(widgetInstanceId) || {};
 var customAppsList = Fliplet.Navigate.Apps.list();
 var defaultTransitionVal = 'fade';
 var selectDefaultPage = true;
+var $sections = {};
+var optionsValues = {};
 
 var fields = [
   'linkLabel',
@@ -56,30 +58,6 @@ var emailProviderData = $.extend(true, {
   html: '',
   to: []
 }, widgetInstanceData.appData ? widgetInstanceData.appData.untouchedData : {});
-
-// кешируем секции по уникальнім ключам. нужно придумать класс
-var $sections = {};
-
-$('section').each(function(index, element) {
-  var $section = $(element);
-  var sectionDataKey = $section.data('key');
-
-  $sections[sectionDataKey] = $section;
-});
-
-// кешируем область управления каждого контроллера
-var optionsValues = {};
-
-$('.action-configurator').each(function(index, element) {
-  var $select = $(element);
-  var selectId = $select.attr('id');
-
-  optionsValues[selectId] = [];
-  $select.find('option').each(function(index, element) {
-    optionsValues[selectId].push($(element).val());
-  });
-  $select.on('change', onChange);
-});
 
 // Only Fliplet, "Colgate" and "Hills Pet Nutirition" can see the "Open app" feature while it's on beta
 Fliplet.Organizations.get().then(function(organizations) {
@@ -186,13 +164,13 @@ function onChange() {
   var $element = $(this);
   var selectedAction = $element.val();
   var fileType = files.contentType ? files.contentType.split('/')[0] : '';
-  var dataControl = $element.attr('id');
+  var selectId = $element.attr('id');
 
-  showSection(selectedAction, dataControl);
+  showSection(selectedAction, selectId);
 
   switch (selectedAction) {
     case 'logout':
-      $sections.screen.addClass('show');
+      $('#logoutAction').trigger('change');
 
       break;
     case 'document':
@@ -245,6 +223,24 @@ $appAction.on('change', function onAppActionChange() {
   $('.' + externalAppValueMap[value]).addClass('show');
   // Tells the parent widget this provider has changed its interface height
   Fliplet.Widget.autosize();
+});
+
+$('section').each(function(index, element) {
+  var $section = $(element);
+  var sectionDataKey = $section.data('key');
+
+  $sections[sectionDataKey] = $section;
+});
+
+$('.action-configurator').each(function(index, element) {
+  var $select = $(element);
+  var selectId = $select.attr('id');
+
+  optionsValues[selectId] = [];
+  $select.find('option').each(function(index, element) {
+    optionsValues[selectId].push($(element).val());
+  });
+  $select.on('change', onChange);
 });
 
 $('#add-query').on('click', function() {

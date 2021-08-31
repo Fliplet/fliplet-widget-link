@@ -154,6 +154,8 @@ Object.keys(btnSelector).forEach(function(key) {
 
 $(window).on('resize', Fliplet.Widget.autosize);
 
+/* Show/hide toggle function for sections on the same level.
+This is important for cases when we have a dropdown with additional sections on the inner levels (i.e logout) */
 function showSection(sectionDataKey, selectId) {
   optionsValues[selectId].forEach(function(key) {
     $sections[key] && $sections[key].toggleClass('show', key === sectionDataKey);
@@ -166,27 +168,15 @@ function onChange() {
   var fileType = files.contentType ? files.contentType.split('/')[0] : '';
   var selectId = $element.attr('id');
 
+  // this is used to clear uploaded file if user changes link type
+  if (!_.isEmpty(files.selectedFiles) || (selectedAction === 'document' && fileType !== 'application') || (selectedAction === 'video' && fileType !== 'video')) {
+    clearUploadedFiles();
+  }
+
   showSection(selectedAction, selectId);
 
-  switch (selectedAction) {
-    case 'logout':
-      $('#logoutAction').trigger('change');
-
-      break;
-    case 'document':
-      if (fileType !== 'application') {
-        clearUploadedFiles();
-      }
-
-      break;
-    case 'video':
-      if (fileType !== 'video') {
-        clearUploadedFiles();
-      }
-
-      break;
-    default:
-      break;
+  if (selectedAction === 'logout') {
+    $('#logoutAction').trigger('change');
   }
 
   Fliplet.Studio.emit('widget-changed');
@@ -200,10 +190,6 @@ function onChange() {
 }
 
 function clearUploadedFiles() {
-  if (!_.isEmpty(files.selectedFiles)) {
-    return;
-  }
-
   files.selectedFiles = {};
   files.selectFiles = [];
 
@@ -225,6 +211,8 @@ $appAction.on('change', function onAppActionChange() {
   Fliplet.Widget.autosize();
 });
 
+/* Caching all <section> elements to reduce DOM parsing.
+   Each <section> element is hidden by css and connected through [data-key] attribute with specific <option> by value. */
 $('section').each(function(index, element) {
   var $section = $(element);
   var sectionDataKey = $section.data('key');
@@ -232,6 +220,7 @@ $('section').each(function(index, element) {
   $sections[sectionDataKey] = $section;
 });
 
+// Caching and grouping all <options> to show and hide their corresponding sections
 $('.action-configurator').each(function(index, element) {
   var $select = $(element);
   var selectId = $select.attr('id');

@@ -449,6 +449,7 @@ function save(notifyComplete) {
 
 function initialiseData() {
   if (widgetInstanceData.action) {
+    console.log(widgetInstanceData);
     fields.forEach(function(fieldId) {
       $('#' + fieldId).val(widgetInstanceData[fieldId]).trigger('change');
       Fliplet.Widget.autosize();

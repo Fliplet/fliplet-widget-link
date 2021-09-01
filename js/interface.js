@@ -450,10 +450,13 @@ function save(notifyComplete) {
 function initialiseData() {
   if (widgetInstanceData.action) {
     fields.forEach(function(fieldId) {
-      if (fieldId !== 'logoutAction') {
-        $('#' + fieldId).val(widgetInstanceData[fieldId]).trigger('change');
-        Fliplet.Widget.autosize();
+      // skipping "change" event on the inner sections selects to prevent hide of the top level sections
+      if (fieldId === 'logoutAction') {
+        return;
       }
+
+      $('#' + fieldId).val(widgetInstanceData[fieldId]).trigger('change');
+      Fliplet.Widget.autosize();
     });
 
     if (widgetInstanceData.action === 'app' && widgetInstanceData.app) {

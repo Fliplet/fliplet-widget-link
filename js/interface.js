@@ -450,8 +450,10 @@ function save(notifyComplete) {
 function initialiseData() {
   if (widgetInstanceData.action) {
     fields.forEach(function(fieldId) {
-      $('#' + fieldId).val(widgetInstanceData[fieldId]).trigger('change');
-      Fliplet.Widget.autosize();
+      if (fieldId !== 'logoutAction') {
+        $('#' + fieldId).val(widgetInstanceData[fieldId]).trigger('change');
+        Fliplet.Widget.autosize();
+      }
     });
 
     if (widgetInstanceData.action === 'app' && widgetInstanceData.app) {

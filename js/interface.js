@@ -450,8 +450,6 @@ function save(notifyComplete) {
 function initialiseData() {
   if (widgetInstanceData.action) {
     fields.forEach(function(fieldId) {
-      console.log(widgetInstanceData);
-
       if (fieldId !== 'logoutAction') {
         $('#' + fieldId).val(widgetInstanceData[fieldId]).trigger('change');
         Fliplet.Widget.autosize();

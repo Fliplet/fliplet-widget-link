@@ -162,7 +162,7 @@ function showSection(sectionDataKey, selectId) {
   });
 }
 
-function onChange() {
+function onActionChange() {
   var $element = $(this);
   var selectedAction = $element.val();
   var fileType = files.contentType ? files.contentType.split('/')[0] : '';
@@ -229,7 +229,7 @@ $('.action-configurator').each(function(index, element) {
   $select.find('option').each(function(index, element) {
     optionsValues[selectId].push($(element).val());
   });
-  $select.on('change', onChange);
+  $select.on('change', onActionChange);
 });
 
 $('#add-query').on('click', function() {

@@ -459,6 +459,10 @@ function initialiseData() {
       Fliplet.Widget.autosize();
     });
 
+    if (widgetInstanceData.action === 'logout') {
+      $('#logoutAction').val(widgetInstanceData.logoutAction).trigger('change');
+    }
+
     if (widgetInstanceData.action === 'app' && widgetInstanceData.app) {
       $appAction.val(widgetInstanceData.app);
       $appAction.trigger('change');

@@ -296,6 +296,7 @@ Fliplet.Studio.onMessage(function(event) {
         break;
       case 'show-widget':
         Fliplet.Widget.autosize();
+
         break;
       default:
         break;

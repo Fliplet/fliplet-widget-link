@@ -294,6 +294,10 @@ Fliplet.Studio.onMessage(function(event) {
         $('#screen-list').removeClass('has-error');
 
         break;
+      case 'widget-autosize':
+        Fliplet.Widget.autosize();
+
+        break;
       default:
         break;
     }

@@ -5,6 +5,7 @@ var defaultTransitionVal = 'fade';
 var selectDefaultPage = true;
 var $sections = {};
 var optionsValues = {};
+var functionStr = '';
 
 var fields = [
   'linkLabel',
@@ -179,6 +180,10 @@ function onActionChange() {
     $('#logoutAction').trigger('change');
   }
 
+  if (selectedAction === 'runFunction') {
+    $('#functionStr').trigger('change');
+  }
+
   Fliplet.Studio.emit('widget-changed');
 
   /* Fliplet.Widget.emit(validInputEventName, {
@@ -242,6 +247,21 @@ $('#query').on('change', function() {
   if ($(this).val() !== '') {
     $('#add-query').trigger('click');
   }
+});
+
+$('#functionStr').on('change', function() {
+  var regex = /^(this\.)?[a-zA-Z_]\w*(\.[a-zA-Z_]\w*)*(\(\))?$/;
+  var defaultError = Fliplet.Locale.translate(`${$(this).val()} is not a valid function name`);
+
+  $(this).siblings('.error-success-message').removeClass('text-danger text-success').html('');
+
+  if ($(this).val() && !regex.test($(this).val())) {
+    $(this).siblings('.error-success-message').addClass('text-danger').html(defaultError);
+
+    return;
+  }
+
+  functionStr = $(this).val();
 });
 
 $('.document-remove').on('click', function() {
@@ -416,6 +436,14 @@ function save(notifyComplete) {
     }
   }
 
+  if (data.action === 'runFunction') {
+    if ($('#functionStr').siblings('.error-success-message').hasClass('text-danger')) {
+      return;
+    }
+
+    data.functionStr = functionStr;
+  }
+
   if (data.url && !data.url.match(/^[A-z]+:/i)) {
     data.url = 'http://' + data.url;
   }
@@ -462,6 +490,10 @@ function initialiseData() {
       $('#' + fieldId).val(widgetInstanceData[fieldId]).trigger('change');
       Fliplet.Widget.autosize();
     });
+
+    if (widgetInstanceData.action === 'runFunction') {
+      $('#functionStr').val(widgetInstanceData.functionStr).trigger('change');
+    }
 
     if (widgetInstanceData.action === 'logout') {
       $('#logoutAction').val(widgetInstanceData.logoutAction).trigger('change');

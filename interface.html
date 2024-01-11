@@ -34,12 +34,28 @@
               <option value="app">Link to an external application</option>
               <option value="exit-app">Return to app list</option>
               <option value="logout">Log out</option>
+              <option value="runFunction">Call a JavaScript Function</option>
             </select>
             <span class="icon fa fa-chevron-down"></span>
           </label>
         </div>
       </div>
     </div>
+
+    <section id="runFunctionSection" data-key="runFunction">
+      <div class="form-group">
+        <div class="col-sm-4 control-label">
+          <label for="functionStr">Javascript Function</label>
+        </div>
+        <div class="col-sm-8">
+          <input type="text" class="form-control" name="function_name" id="functionStr" placeholder="e.g.myFunction" />
+          <p class="error-success-message"></p>
+          <div class="text-right">
+            <a href="#">How to define a function</a>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <section id="logoutSection" data-key="logout">
       <div class="form-group">

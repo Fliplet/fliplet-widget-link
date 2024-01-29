@@ -5,7 +5,6 @@ var defaultTransitionVal = 'fade';
 var selectDefaultPage = true;
 var $sections = {};
 var optionsValues = {};
-var functionStr = '';
 
 var fields = [
   'linkLabel',
@@ -14,7 +13,8 @@ var fields = [
   'page',
   'transition',
   'url',
-  'query'
+  'query',
+  'functionStr'
 ];
 
 var btnSelector = {
@@ -180,8 +180,15 @@ function onActionChange() {
     $('#logoutAction').trigger('change');
   }
 
+  $('#showVariables').addClass('hidden');
+
   if (selectedAction === 'runFunction') {
-    $('#functionStr').trigger('change');
+    $('#runFunctionSection').trigger('change');
+
+    if (widgetInstanceData.variables && widgetInstanceData.variables.length) {
+      $('#showVariables').removeClass('hidden');
+      renderVariables();
+    }
   }
 
   Fliplet.Studio.emit('widget-changed');
@@ -204,6 +211,36 @@ function clearUploadedFiles() {
     $('.' + fileType + ' .file-title span').text('');
   });
 }
+
+function renderVariables() {
+  var availableVariables = $('#availableVariables');
+
+  widgetInstanceData.variables.forEach(function(variable) {
+    var row = $('<div class="variable-row">');
+
+    var content = $(`<p><span class="info-holder">this.${variable.name}</span> - ${variable.description}</p>`);
+
+    row.append(content);
+
+    availableVariables.append(row);
+  });
+}
+
+$('#showVariables').on('click', function() {
+  $(this).addClass('hidden');
+  $('#hideVariables').removeClass('hidden');
+  $('#variablesContainer').removeClass('hidden');
+
+  Fliplet.Widget.autosize();
+});
+
+$('#hideVariables').on('click', function() {
+  $(this).addClass('hidden');
+  $('#showVariables').removeClass('hidden');
+  $('#variablesContainer').addClass('hidden');
+
+  Fliplet.Widget.autosize();
+});
 
 $appAction.on('change', function onAppActionChange() {
   var value = $(this).val();
@@ -260,8 +297,6 @@ $('#functionStr').on('change', function() {
 
     return;
   }
-
-  functionStr = $(this).val();
 });
 
 $('.document-remove').on('click', function() {
@@ -440,8 +475,6 @@ function save(notifyComplete) {
     if ($('#functionStr').siblings('.error-success-message').hasClass('text-danger')) {
       return;
     }
-
-    data.functionStr = functionStr;
   }
 
   if (data.url && !data.url.match(/^[A-z]+:/i)) {
@@ -465,6 +498,10 @@ function save(notifyComplete) {
 
   if (data.logoutAction && data.action !== 'logout') {
     delete data['logoutAction'];
+  }
+
+  if (data.action !== 'runFunction') {
+    delete data['functionStr'];
   }
 
   if (notifyComplete) {

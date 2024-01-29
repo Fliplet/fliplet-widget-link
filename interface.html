@@ -38,11 +38,21 @@
             </select>
             <span class="icon fa fa-chevron-down"></span>
           </label>
+          <div class="text-right">
+            <a href="#" id="showVariables" class="hidden">Show available variables</a>
+            <a href="#" id="hideVariables" class="hidden">Hide available variables</a>
+          </div>
         </div>
       </div>
     </div>
 
     <section id="runFunctionSection" data-key="runFunction">
+      <div id="variablesContainer" class="variables hidden">
+        <div id="availableVariables" class="availableVariables"></div>
+        <div class="text-right">
+          <a href="#">Learn more about variables <i class="fa fa-question-circle" ref="tooltip" data-viewport=".modal-body" data-toggle="tooltip" data-placement="left" title="Coming soon ..."></i></a>
+        </div>
+      </div>
       <div class="form-group">
         <div class="col-sm-4 control-label">
           <label for="functionStr">Javascript Function</label>
@@ -51,7 +61,7 @@
           <input type="text" class="form-control" name="function_name" id="functionStr" placeholder="e.g.myFunction" />
           <p class="error-success-message"></p>
           <div class="text-right">
-            <a href="#">How to define a function</a>
+            <a href="https://developers.fliplet.com/API/core/navigate.html#define-a-javascript-function-as-action">How to define a function</a>
           </div>
         </div>
       </div>

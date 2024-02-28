@@ -13,7 +13,8 @@ var fields = [
   'page',
   'transition',
   'url',
-  'query'
+  'query',
+  'functionStr'
 ];
 
 var btnSelector = {
@@ -179,6 +180,17 @@ function onActionChange() {
     $('#logoutAction').trigger('change');
   }
 
+  $('#showVariables').addClass('hidden');
+
+  if (selectedAction === 'runFunction') {
+    $('#runFunctionSection').trigger('change');
+
+    if (widgetInstanceData.variables && widgetInstanceData.variables.length) {
+      $('#showVariables').removeClass('hidden');
+      renderVariables();
+    }
+  }
+
   Fliplet.Studio.emit('widget-changed');
 
   /* Fliplet.Widget.emit(validInputEventName, {
@@ -199,6 +211,36 @@ function clearUploadedFiles() {
     $('.' + fileType + ' .file-title span').text('');
   });
 }
+
+function renderVariables() {
+  var availableVariables = $('#availableVariables');
+
+  widgetInstanceData.variables.forEach(function(variable) {
+    var row = $('<div class="variable-row">');
+
+    var content = $(`<p><span class="info-holder">this.${variable.name}</span> - ${variable.description}</p>`);
+
+    row.append(content);
+
+    availableVariables.append(row);
+  });
+}
+
+$('#showVariables').on('click', function() {
+  $(this).addClass('hidden');
+  $('#hideVariables').removeClass('hidden');
+  $('#variablesContainer').removeClass('hidden');
+
+  Fliplet.Widget.autosize();
+});
+
+$('#hideVariables').on('click', function() {
+  $(this).addClass('hidden');
+  $('#showVariables').removeClass('hidden');
+  $('#variablesContainer').addClass('hidden');
+
+  Fliplet.Widget.autosize();
+});
 
 $appAction.on('change', function onAppActionChange() {
   var value = $(this).val();
@@ -241,6 +283,19 @@ $('#add-query').on('click', function() {
 $('#query').on('change', function() {
   if ($(this).val() !== '') {
     $('#add-query').trigger('click');
+  }
+});
+
+$('#functionStr').on('change', function() {
+  var regex = /^(this\.)?[a-zA-Z_]\w*(\.[a-zA-Z_]\w*)*(\(\))?$/;
+  var defaultError = Fliplet.Locale.translate(`${$(this).val()} is not a valid function name`);
+
+  $(this).siblings('.error-success-message').removeClass('text-danger text-success').html('');
+
+  if ($(this).val() && !regex.test($(this).val())) {
+    $(this).siblings('.error-success-message').addClass('text-danger').html(defaultError);
+
+    return;
   }
 });
 
@@ -416,6 +471,12 @@ function save(notifyComplete) {
     }
   }
 
+  if (data.action === 'runFunction') {
+    if ($('#functionStr').siblings('.error-success-message').hasClass('text-danger')) {
+      return;
+    }
+  }
+
   if (data.url && !data.url.match(/^[A-z]+:/i)) {
     data.url = 'http://' + data.url;
   }
@@ -437,6 +498,10 @@ function save(notifyComplete) {
 
   if (data.logoutAction && data.action !== 'logout') {
     delete data['logoutAction'];
+  }
+
+  if (data.action !== 'runFunction') {
+    delete data['functionStr'];
   }
 
   if (notifyComplete) {
@@ -462,6 +527,10 @@ function initialiseData() {
       $('#' + fieldId).val(widgetInstanceData[fieldId]).trigger('change');
       Fliplet.Widget.autosize();
     });
+
+    if (widgetInstanceData.action === 'runFunction') {
+      $('#functionStr').val(widgetInstanceData.functionStr).trigger('change');
+    }
 
     if (widgetInstanceData.action === 'logout') {
       $('#logoutAction').val(widgetInstanceData.logoutAction).trigger('change');

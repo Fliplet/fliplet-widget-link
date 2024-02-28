@@ -71,7 +71,7 @@ section,
 }
 
 .info-holder .btn-link.text-danger {
-  color: #E03629 !important;
+  color: #e03629 !important;
 }
 
 .info-holder .btn-link.text-danger:active:focus,
@@ -79,4 +79,19 @@ section,
 .info-holder .btn-link.text-danger:focus,
 .info-holder .btn-link.text-danger:hover {
   color: #a94442 !important;
+}
+
+.variables {
+  background-color: #f8f6f7;
+  padding: 10px;
+}
+
+.variable-row {
+  display: flex;
+  align-items: flex-start;
+  column-gap: 8px;
+}
+
+.variable-row .info-holder {
+  color: #b73750;
 }

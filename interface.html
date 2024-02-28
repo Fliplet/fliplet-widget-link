@@ -18,10 +18,9 @@
     <div id="link-action" {{#if options.hideAction}} class="hidden" {{/if}}>
       <div class="form-group">
         <div class="col-sm-4 control-label">
-          <label for="action">Link action</label>
+          <label for="action">{{#if options.actionLabel}}{{options.actionLabel}}{{else}}Link action{{/if}}</label>
         </div>
         <div class="col-sm-8">
-
           <label for="action" class="select-proxy-display">
             <select name="link_type" id="action" data-label="select" class="hidden-select form-control action-configurator">
               <option value="none">None</option>

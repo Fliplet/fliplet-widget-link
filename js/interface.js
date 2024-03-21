@@ -181,13 +181,15 @@ function onActionChange() {
   }
 
   $('#showVariables').addClass('hidden');
+  $('#hideVariables').addClass('hidden');
+
+  clearVariables();
 
   if (selectedAction === 'runFunction') {
     $('#runFunctionSection').trigger('change');
 
     if (widgetInstanceData.variables && widgetInstanceData.variables.length) {
       $('#showVariables').removeClass('hidden');
-      renderVariables();
     }
   }
 
@@ -226,10 +228,17 @@ function renderVariables() {
   });
 }
 
+function clearVariables() {
+  $('#variablesContainer').addClass('hidden');
+  $('#availableVariables').empty();
+}
+
 $('#showVariables').on('click', function() {
   $(this).addClass('hidden');
   $('#hideVariables').removeClass('hidden');
   $('#variablesContainer').removeClass('hidden');
+
+  renderVariables();
 
   Fliplet.Widget.autosize();
 });
@@ -237,7 +246,8 @@ $('#showVariables').on('click', function() {
 $('#hideVariables').on('click', function() {
   $(this).addClass('hidden');
   $('#showVariables').removeClass('hidden');
-  $('#variablesContainer').addClass('hidden');
+
+  clearVariables();
 
   Fliplet.Widget.autosize();
 });

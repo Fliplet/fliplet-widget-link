@@ -513,9 +513,7 @@ Fliplet.Pages.get()
       }
 
       $select.append(
-        '<option value="' + page.id + '"'
-        + (widgetInstanceData.page === page.id.toString() ? ' selected' : '')
-        + '>' + page.title + '</option>'
+        `<option value="${page.id}"${widgetInstanceData.page === page.id.toString() ? ' selected' : ''}>${page.title}</option>`
       );
     });
 

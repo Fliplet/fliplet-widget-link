@@ -60,7 +60,7 @@ var emailProviderData = $.extend(true, {
   to: []
 }, widgetInstanceData.appData ? widgetInstanceData.appData.untouchedData : {});
 
-// Only Fliplet, "Colgate" and "Hills Pet Nutirition" can see the "Open app" feature while it's on beta
+// Show "Open app" feature to specific organizations while in beta
 Fliplet.Organizations.get().then(function(organizations) {
   var valid = organizations.some(function(org) {
     return [8, 64, 70].indexOf(org.id) !== -1 || org.name.toLowerCase().indexOf('fliplet') !== -1;
@@ -516,7 +516,7 @@ function save(notifyComplete) {
   }
 }
 
-function initialiseData() {
+function initializeData() {
   if (widgetInstanceData.action) {
     fields.forEach(function(fieldId) {
       // skipping "change" event on the inner sections selects to prevent hide of the top level sections
@@ -569,11 +569,11 @@ Fliplet.Pages.get()
     var $select = $('#page');
 
     (pages || []).forEach(function(page) {
-      var pageIsOmited = _.some(widgetInstanceData.omitPages, function(omittedPage) {
+      var pageIsOmitted = _.some(widgetInstanceData.omitPages, function(omittedPage) {
         return omittedPage === page.id;
       });
 
-      if (pageIsOmited) {
+      if (pageIsOmitted) {
         return;
       }
 
@@ -582,14 +582,12 @@ Fliplet.Pages.get()
       }
 
       $select.append(
-        '<option value="' + page.id + '"' +
-        (widgetInstanceData.page === page.id.toString() ? ' selected' : '') +
-        '>' + page.title + '</option>'
+        `<option value="${page.id}"${widgetInstanceData.page === page.id.toString() ? ' selected' : ''}>${page.title}</option>`
       );
     });
 
     return Promise.resolve();
   })
-  .then(initialiseData);
+  .then(initializeData);
 
 Fliplet.Widget.autosize();

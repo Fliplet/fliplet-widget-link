@@ -155,11 +155,132 @@ Object.keys(btnSelector).forEach(function(key) {
 
 $(window).on('resize', Fliplet.Widget.autosize);
 
+function getLapContext() {
+  return Fliplet.Widget.findParents({ isProvider: true }).then(function (parents) {
+    const context = {
+      inDataContainer: false,
+      inSlide: false,
+      inSlider: false,
+      inSlideContainer: false,
+      parents
+    };
+
+    parents.forEach(function (parent) {
+      // ✅ Detect Data Container (record-container / list-repeater)
+      if (parent.package === 'com.fliplet.record-container' ||
+          parent.package === 'com.fliplet.list-repeater') {
+        context.inDataContainer = true;
+      }
+
+      // ✅ Detect Slide
+      if (parent.package === 'com.fliplet.slide') {
+        context.inSlide = true;
+      }
+
+      // ✅ Detect Slider container
+      if (parent.package === 'com.fliplet.slider-container') {
+        context.inSlider = true;
+      }
+    });
+
+    // ✅ Mark combined condition
+    if (context.inSlide && context.inSlider) {
+      context.inSlideContainer = true;
+    }
+
+    return context;
+  });
+}
+function navigateSlide(direction) {
+  getLapContext().then(context => {
+    const slideParent = context.parents.find(p => p.nodeName === 'slide');
+    const sliderParent = context.parents.find(p => p.nodeName === 'slider');
+
+    if (!slideParent || !sliderParent) return;
+
+    // Get the slider widget instance
+    const sliderWidget = Fliplet.Widget.get(sliderParent.id); // <--- important
+
+    if (!sliderWidget || !sliderWidget.swiper) return;
+
+    const swiper = sliderWidget.swiper;
+
+    // Check boundaries
+    if (direction === 'next' && (!swiper.allowSlideNext || swiper.isEnd)) return;
+    if (direction === 'prev' && (!swiper.allowSlidePrev || swiper.isBeginning)) return;
+
+    if (direction === 'next') swiper.slideNext();
+    if (direction === 'prev') swiper.slidePrev();
+  });
+}
+
+Fliplet.Widget.addEventListener('navigate-slide', function(event) {
+  const direction = event.data.direction; // 'next' or 'prev'
+  navigateSlide(direction);
+});
+
+
+
+const actionContextMap = {
+  addEntry: ['dataContainer'],
+  editEntry: ['dataContainer'],
+  deleteEntry: ['dataContainer'],
+  email: ['dataContainer'],
+  telephone: ['dataContainer'],
+  chat: ['dataContainer'],
+  nextSlide: ['slideContainer'],
+  previousSlide: ['slideContainer'],
+  screen: ['any'],
+  url: ['any'],
+  document: ['any'],
+  video: ['any'],
+  app: ['any'],
+  logout: ['any'],
+  runFunction: ['any'],
+  back: ['any'],
+  'exit-app': ['any'],
+  'about-overlay': ['any'],
+  none: ['any']
+};
+
+
+function filterAvailableActions(context) {
+  $('#action option').each(function () {
+    const $option = $(this);
+    const value = $option.attr('value');
+    const allowedContexts = actionContextMap[value] || [];
+
+    let isAllowed = false;
+
+    if (allowedContexts.includes('any')) {
+      isAllowed = true;
+    }
+    if (allowedContexts.includes('dataContainer') && context.inDataContainer) {
+      isAllowed = true;
+    }
+    if (allowedContexts.includes('slideContainer') && context.inSlideContainer) {
+      isAllowed = true;
+    }
+
+    if (!isAllowed) {
+      $option.hide(); // remove from dropdown
+    } else {
+      $option.show();
+    }
+  });
+}
+
+
+
 /* Show/hide toggle function for sections on the same level.
 This is important for cases when we have a dropdown with additional sections on the inner levels (i.e logout) */
 function showSection(sectionDataKey, selectId) {
   optionsValues[selectId].forEach(function(key) {
-    $sections[key] && $sections[key].toggleClass('show', key === sectionDataKey);
+    if ($sections[key]) {
+      // Check if the section’s data-key contains the selected action
+      var keys = $sections[key].data('key').split(/\s+/);
+      $sections[key].toggleClass('show', keys.includes(sectionDataKey));
+    }
   });
 }
 
@@ -174,7 +295,23 @@ function onActionChange() {
     clearUploadedFiles();
   }
 
+  if (selectedAction === 'addEntry' || selectedAction === 'editEntry') {
+    $('#pageLabel').text('Select a screen with a form');
+  } else if (selectedAction === 'deleteEntry') {
+    $('#pageLabel').text('Select a screen to take user after');
+  } else {
+    $('#pageLabel').text('Select a screen');
+  }
+
   showSection(selectedAction, selectId);
+
+    // Toggle delete-only fields
+  if (selectedAction === 'deleteEntry') {
+    $('#delete-fields').removeClass('hidden');
+  }
+  else {
+    $('#delete-fields').addClass('hidden');
+  }
 
   if (selectedAction === 'logout') {
     $('#logoutAction').trigger('change');
@@ -243,6 +380,16 @@ $('#showVariables').on('click', function() {
   Fliplet.Widget.autosize();
 });
 
+$('#deleteConfirmDialog').on('change', function () {
+  if ($(this).is(':checked')) {
+    $('#deleteMessage').closest('.form-group').show();
+  } else {
+    $('#deleteMessage').closest('.form-group').hide();
+  }
+}).trigger('change'); // run once on load
+
+
+
 $('#hideVariables').on('click', function() {
   $(this).addClass('hidden');
   $('#showVariables').removeClass('hidden');
@@ -267,9 +414,11 @@ $appAction.on('change', function onAppActionChange() {
    Each <section> element is hidden by css and connected through [data-key] attribute with specific <option> by value. */
 $('section').each(function(index, element) {
   var $section = $(element);
-  var sectionDataKey = $section.data('key');
+  var sectionDataKeys = $section.data('key').split(/\s+/);
 
-  $sections[sectionDataKey] = $section;
+  sectionDataKeys.forEach(function(key) {
+    $sections[key] = $section;
+  });
 });
 
 // Caching and grouping all <options> to show and hide their corresponding sections
@@ -599,5 +748,13 @@ Fliplet.Pages.get()
     return Promise.resolve();
   })
   .then(initializeData);
+
+  $(function () {
+  getLapContext().then(function (context) {
+    console.log('LAP Context:', context);
+    filterAvailableActions(context);
+  });
+});
+
 
 Fliplet.Widget.autosize();

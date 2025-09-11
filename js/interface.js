@@ -156,7 +156,9 @@ Object.keys(btnSelector).forEach(function(key) {
 $(window).on('resize', Fliplet.Widget.autosize);
 
 function getLapContext() {
-  return Fliplet.Widget.findParents({ isProvider: true }).then(function (parents) {
+  return Fliplet.Widget.findParents({
+    isProvider: true
+  }).then(function(parents) {
     const context = {
       inDataContainer: false,
       inSlide: false,
@@ -165,25 +167,25 @@ function getLapContext() {
       parents
     };
 
-    parents.forEach(function (parent) {
-      // ✅ Detect Data Container (record-container / list-repeater)
+    parents.forEach(function(parent) {
+      //  Detect Data Container (record-container / list-repeater)
       if (parent.package === 'com.fliplet.record-container' ||
-          parent.package === 'com.fliplet.list-repeater') {
+        parent.package === 'com.fliplet.list-repeater') {
         context.inDataContainer = true;
       }
 
-      // ✅ Detect Slide
+      //  Detect Slide
       if (parent.package === 'com.fliplet.slide') {
         context.inSlide = true;
       }
 
-      // ✅ Detect Slider container
+      //  Detect Slider container
       if (parent.package === 'com.fliplet.slider-container') {
         context.inSlider = true;
       }
     });
 
-    // ✅ Mark combined condition
+    //  Mark combined condition
     if (context.inSlide && context.inSlider) {
       context.inSlideContainer = true;
     }
@@ -191,6 +193,7 @@ function getLapContext() {
     return context;
   });
 }
+
 function navigateSlide(direction) {
   getLapContext().then(context => {
     const slideParent = context.parents.find(p => p.nodeName === 'slide');
@@ -245,7 +248,7 @@ const actionContextMap = {
 
 
 function filterAvailableActions(context) {
-  $('#action option').each(function () {
+  $('#action option').each(function() {
     const $option = $(this);
     const value = $option.attr('value');
     const allowedContexts = actionContextMap[value] || [];
@@ -305,11 +308,10 @@ function onActionChange() {
 
   showSection(selectedAction, selectId);
 
-    // Toggle delete-only fields
+  // Toggle delete-only fields
   if (selectedAction === 'deleteEntry') {
     $('#delete-fields').removeClass('hidden');
-  }
-  else {
+  } else {
     $('#delete-fields').addClass('hidden');
   }
 
@@ -380,7 +382,7 @@ $('#showVariables').on('click', function() {
   Fliplet.Widget.autosize();
 });
 
-$('#deleteConfirmDialog').on('change', function () {
+$('#deleteConfirmDialog').on('change', function() {
   if ($(this).is(':checked')) {
     $('#deleteMessage').closest('.form-group').show();
   } else {
@@ -602,9 +604,15 @@ function save(notifyComplete) {
 
       // All recipients are found in the "emailProviderData.to" array, but with "type"
       // defining whether they are "to" or "cc" or "bcc" recipients.
-      data.appData.to = _.find(emailProviderData.to, function(o) { return o.type === 'to'; }) || '';
-      data.appData.cc = _.find(emailProviderData.to, function(o) { return o.type === 'cc'; }) || '';
-      data.appData.bcc = _.find(emailProviderData.to, function(o) { return o.type === 'bcc'; }) || '';
+      data.appData.to = _.find(emailProviderData.to, function(o) {
+        return o.type === 'to';
+      }) || '';
+      data.appData.cc = _.find(emailProviderData.to, function(o) {
+        return o.type === 'cc';
+      }) || '';
+      data.appData.bcc = _.find(emailProviderData.to, function(o) {
+        return o.type === 'bcc';
+      }) || '';
     } else if (data.app === 'googlechrome.website') {
       data.appData.url = $('#' + externalAppValueMap[appAction]).val();
     } else {
@@ -749,8 +757,8 @@ Fliplet.Pages.get()
   })
   .then(initializeData);
 
-  $(function () {
-  getLapContext().then(function (context) {
+$(function() {
+  getLapContext().then(function(context) {
     console.log('LAP Context:', context);
     filterAvailableActions(context);
   });

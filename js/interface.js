@@ -194,33 +194,6 @@ function getLapContext() {
   });
 }
 
-function navigateSlide(direction) {
-  getLapContext().then(context => {
-    const slideParent = context.parents.find(p => p.nodeName === 'slide');
-    const sliderParent = context.parents.find(p => p.nodeName === 'slider');
-
-    if (!slideParent || !sliderParent) return;
-
-    // Get the slider widget instance
-    const sliderWidget = Fliplet.Widget.get(sliderParent.id); // <--- important
-
-    if (!sliderWidget || !sliderWidget.swiper) return;
-
-    const swiper = sliderWidget.swiper;
-
-    // Check boundaries
-    if (direction === 'next' && (!swiper.allowSlideNext || swiper.isEnd)) return;
-    if (direction === 'prev' && (!swiper.allowSlidePrev || swiper.isBeginning)) return;
-
-    if (direction === 'next') swiper.slideNext();
-    if (direction === 'prev') swiper.slidePrev();
-  });
-}
-
-Fliplet.Widget.addEventListener('navigate-slide', function(event) {
-  const direction = event.data.direction; // 'next' or 'prev'
-  navigateSlide(direction);
-});
 
 
 
@@ -671,16 +644,26 @@ function save(notifyComplete) {
     delete data['functionStr'];
   }
 
-  if (notifyComplete) {
-    // TODO: validate query
-    Fliplet.Widget.save(data).then(function() {
-      Fliplet.Widget.complete();
+      // Keep the link instance for debugging
+    data.linkInstanceId = Fliplet.Widget.getDefaultId();
+
+    // Save the parent slide ID for navigation
+    return Fliplet.Widget.findParents({ name: 'slide' }).then(function(parents) {
+      const slideParent = parents.find(p => p.package === 'com.fliplet.slide');
+      if (slideParent) {
+        data.instanceId = slideParent.id;
+      }
+
+      if (notifyComplete) {
+        return Fliplet.Widget.save(data).then(function() {
+          Fliplet.Widget.complete();
+        });
+      } else {
+        return Fliplet.Widget.save(data).then(function() {
+          Fliplet.Studio.emit('reload-widget-instance', widgetInstanceId);
+        });
+      }
     });
-  } else {
-    Fliplet.Widget.save(data).then(function() {
-      Fliplet.Studio.emit('reload-widget-instance', widgetInstanceId);
-    });
-  }
 }
 
 function initializeData() {

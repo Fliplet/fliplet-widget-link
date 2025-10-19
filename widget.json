@@ -9,6 +9,7 @@
     "dependencies": [
       "fliplet-core",
       "fliplet-studio-ui",
+      "fliplet-datasources",
       "lodash"
     ],
     "assets": [

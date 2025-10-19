@@ -5,6 +5,7 @@ var defaultTransitionVal = 'fade';
 var selectDefaultPage = true;
 var $sections = {};
 var optionsValues = {};
+var lapContext;
 
 var fields = [
   'linkLabel',
@@ -155,11 +156,228 @@ Object.keys(btnSelector).forEach(function(key) {
 
 $(window).on('resize', Fliplet.Widget.autosize);
 
+function getLapContext() {
+  return Fliplet.Widget.findParents({
+    isProvider: true
+  }).then(function(parents) {
+    const context = {
+      inDataContainer: false,
+      inSlide: false,
+      inSlider: false,
+      inSlideContainer: false,
+      sliderId: null,
+      parents
+    };
+
+    parents.forEach(function(parent) {
+      //  Detect Data Container (record-container / list-repeater)
+      if (parent.package === 'com.fliplet.record-container' ||
+        parent.package === 'com.fliplet.list-repeater') {
+        context.inDataContainer = true;
+      }
+
+      //  Detect Slide
+      if (parent.package === 'com.fliplet.slide') {
+        context.inSlide = true;
+      }
+
+      //  Detect Slider container
+      if (parent.package === 'com.fliplet.slider-container') {
+        context.inSlider = true;
+        context.sliderId = parent.id;
+      }
+    });
+
+    //  Mark combined condition
+    if (context.inSlide && context.inSlider) {
+      context.inSlideContainer = true;
+    }
+
+    return context;
+  });
+}
+
+
+
+
+const actionContextMap = {
+  addEntry: ['dataContainer'],
+  editEntry: ['dataContainer'],
+  deleteEntry: ['dataContainer'],
+  email: ['dataContainer'],
+  telephone: ['dataContainer'],
+  chat: ['dataContainer'],
+  nextSlide: ['slideContainer'],
+  previousSlide: ['slideContainer'],
+  screen: ['any'],
+  url: ['any'],
+  document: ['any'],
+  video: ['any'],
+  app: ['any'],
+  logout: ['any'],
+  runFunction: ['any'],
+  back: ['any'],
+  'exit-app': ['any'],
+  'about-overlay': ['any'],
+  none: ['any']
+};
+
+
+function filterAvailableActions(context) {
+$('#action option').each(function() {
+  const $option = $(this);
+  const value = $option.attr('value');
+  const allowedContexts = actionContextMap[value] || [];
+
+  let isAllowed = false;
+
+  if (allowedContexts.includes('any')) {
+    isAllowed = true;
+  }
+  if (allowedContexts.includes('dataContainer') && context.inDataContainer) {
+    isAllowed = true;
+  }
+  if (allowedContexts.includes('slideContainer') && context.inSlideContainer) {
+    isAllowed = true;
+  }
+
+  if (!isAllowed) {
+    $option.hide();
+  } else {
+    $option.show();
+  }
+});
+}
+
+// Initialize LAP column select with dynamic validation
+async function initLapColumnSelect($select) {
+
+  // Get current lap type dynamically based on selected Link Action
+  const currentAction = $('#action').val();
+  let lapType = '';
+  if (currentAction === 'email') lapType = 'email';
+  else if (currentAction === 'telephone') lapType = 'telephone';
+  else if (currentAction === 'chat') lapType = 'chat';
+
+  if (!lapType) return;
+
+  try {
+    const parentDataSource = lapContext.parents.find(p => p.dataSourceId);
+
+    if (!parentDataSource) {
+      $select.empty();
+      $('#parentDataSourceDisplay').text('No data source found');
+      return;
+    }
+
+    const parentDataSourceId = parentDataSource.dataSourceId;
+    $('#parentDataSourceDisplay').text(`ID: ${parentDataSourceId}`);
+
+    // Connect and get datasource info
+    const connection = await Fliplet.DataSources.connect(parentDataSourceId);
+    const dataSource = await Fliplet.DataSources.getById(parentDataSourceId, { cache: false });
+    const columns = dataSource.columns || [];
+
+    // Populate dropdown
+    $select.empty().append('<option value="">Select a column</option>');
+    columns.forEach(col => {
+      if (typeof col === 'string') {
+        $select.append(`<option value="${col}">${col}</option>`);
+      } else {
+        $select.append(`<option value="${col.key}">${col.name}</option>`);
+      }
+    });
+
+    const savedCol = widgetInstanceData.dynamicParameters?.to;
+    if (savedCol) {
+      $select.val(savedCol);
+    }
+
+    // Validation on change
+    $select.off('change.lapValidation').on('change.lapValidation', async function() {
+      const selectedKey = $(this).val();
+      if (!selectedKey) return;
+
+      // Re-read current Link Action for dynamic validation
+      const currentAction = $('#action').val();
+      let lapType = '';
+      if (currentAction === 'email') lapType = 'email';
+      else if (currentAction === 'telephone') lapType = 'telephone';
+      else if (currentAction === 'chat') lapType = 'chat';
+
+      const sampleRecords = await connection.find({ limit: 10 });
+      const invalid = sampleRecords.some(record => {
+        const value = record.data[selectedKey];
+        if (lapType === 'email' || lapType === 'chat') {
+          return value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+        }
+        if (lapType === 'telephone') {
+          return value && !/^\+?[0-9\-\s()]{6,20}$/.test(value);
+        }
+        return false;
+      });
+
+      if (invalid) {
+        // Remove any existing error for this select
+        $select.next('.lap-error-message').remove();
+
+        // Show inline error message
+        $select.after(
+          `<div class="lap-error-message" style="color:#d9534f; font-size:12px; margin-top:4px; margin-bottom:10px;">
+            The selected column does not contain valid ${lapType} data.
+          </div>`
+        );
+        Fliplet.Widget.autosize();
+
+        // Reset selection
+        $select.val('');
+      } else {
+        // Clear error if validation passes
+        $select.next('.lap-error-message').remove();
+      }
+
+    });
+  } catch (err) {
+    console.error('Error fetching datasource columns:', err);
+    $select.empty();
+    $('#parentDataSourceDisplay').text('Error loading data source');
+  }
+}
+
+// Update LAP validation when Link Action changes
+$('#action').on('change', function() {
+  const selectedAction = $(this).val();
+
+  if (['email', 'telephone', 'chat'].includes(selectedAction)) {
+    $('.lap-column-select').each(function () {
+      const $select = $(this);
+      $select.val('').trigger('change');
+      initLapColumnSelect($select);        
+    });
+  }
+});
+
+// On page load: reset LAP selects to default 'none'
+$(document).ready(function () {
+  $('.lap-column-select').each(function () {
+    const $select = $(this);
+    $select.val('').trigger('change'); // default 'none'
+    initLapColumnSelect($select);
+  });
+});
+
+
+
+
 /* Show/hide toggle function for sections on the same level.
 This is important for cases when we have a dropdown with additional sections on the inner levels (i.e logout) */
 function showSection(sectionDataKey, selectId) {
   optionsValues[selectId].forEach(function(key) {
-    $sections[key] && $sections[key].toggleClass('show', key === sectionDataKey);
+    if ($sections[key]) {
+      // Check if the section’s data-key contains the selected action
+      var keys = $sections[key].data('key').split(/\s+/);
+      $sections[key].toggleClass('show', keys.includes(sectionDataKey));
+    }
   });
 }
 
@@ -174,7 +392,22 @@ function onActionChange() {
     clearUploadedFiles();
   }
 
+  if (selectedAction === 'addEntry' || selectedAction === 'editEntry') {
+    $('#pageLabel').text('Select a screen with a form');
+  } else if (selectedAction === 'deleteEntry') {
+    $('#pageLabel').text('Select a screen to take user after');
+  } else {
+    $('#pageLabel').text('Select a screen');
+  }
+
   showSection(selectedAction, selectId);
+
+  // Toggle delete-only fields
+  if (selectedAction === 'deleteEntry') {
+    $('#delete-fields').removeClass('hidden');
+  } else {
+    $('#delete-fields').addClass('hidden');
+  }
 
   if (selectedAction === 'logout') {
     $('#logoutAction').trigger('change');
@@ -192,6 +425,10 @@ function onActionChange() {
       $('#showVariables').removeClass('hidden');
     }
   }
+
+  // Handle chat validation when action changes
+  const selectedPageId = Number($('#page').val());
+  handleChatValidation(selectedAction, selectedPageId);
 
   Fliplet.Studio.emit('widget-changed');
 
@@ -233,6 +470,56 @@ function clearVariables() {
   $('#availableVariables').empty();
 }
 
+function validateChatScreen(pageId) {
+  return Fliplet.API.request({
+    method: 'GET',
+    url: `v1/widget-instances/?pageId=${pageId}`
+  }).then(function(response) {
+    const widgets = response.widgetInstances || [];
+
+    // Filter instances that have package === 'com.fliplet.chat' in settings
+    const chatWidgets = widgets.filter(wi => {
+      const pkg = wi.settings?.package || '';
+      return pkg.trim() === 'com.fliplet.chat';
+    });
+
+    if (chatWidgets.length > 0) {
+      return Promise.resolve(); // Valid chat screen
+    }
+    return Promise.reject('Please select a screen that contains a Chat widget.');
+  }).catch(function(err) {
+    return Promise.reject('Chat not available on selected screen');
+  });
+}
+
+function handleChatValidation(selectedAction, selectedPageId) {
+  if (selectedAction !== 'chat') {
+    $('#screen-list').removeClass('has-error');
+    Fliplet.Widget.info('');
+    Fliplet.Widget.toggleSaveButton(true);
+    return;
+  }
+
+  if (!selectedPageId) {
+    Fliplet.Widget.info('Please select a screen.');
+    $('#screen-list').addClass('has-error');
+    Fliplet.Widget.toggleSaveButton(false);
+    return;
+  }
+
+  validateChatScreen(selectedPageId)
+    .then(() => {
+      $('#screen-list').removeClass('has-error');
+      Fliplet.Widget.info('');
+      Fliplet.Widget.toggleSaveButton(true);
+    })
+    .catch(error => {
+      $('#screen-list').addClass('has-error');
+      Fliplet.Widget.info(error || 'The selected screen does not have a Chat widget.');
+      Fliplet.Widget.toggleSaveButton(false);
+    });
+}
+
 $('#showVariables').on('click', function() {
   $(this).addClass('hidden');
   $('#hideVariables').removeClass('hidden');
@@ -242,6 +529,27 @@ $('#showVariables').on('click', function() {
 
   Fliplet.Widget.autosize();
 });
+
+$('#page').on('change', function() {
+  const selectedPageId = Number($(this).val());
+  const selectedAction = $('#action').val();
+
+  handleChatValidation(selectedAction, selectedPageId);
+});
+
+
+$('#deleteConfirmDialog').on('change', function() {
+  const $fields = $('#deleteMessage, #deleteConfirmLabel, #deleteCancelLabel')
+    .closest('.form-group');
+  if ($(this).is(':checked')) {
+    $fields.show();
+  } else {
+    $fields.hide();
+  }
+  Fliplet.Widget.autosize();
+}).trigger('change');
+
+
 
 $('#hideVariables').on('click', function() {
   $(this).addClass('hidden');
@@ -267,9 +575,11 @@ $appAction.on('change', function onAppActionChange() {
    Each <section> element is hidden by css and connected through [data-key] attribute with specific <option> by value. */
 $('section').each(function(index, element) {
   var $section = $(element);
-  var sectionDataKey = $section.data('key');
+  var sectionDataKeys = $section.data('key').split(/\s+/);
 
-  $sections[sectionDataKey] = $section;
+  sectionDataKeys.forEach(function(key) {
+    $sections[key] = $section;
+  });
 });
 
 // Caching and grouping all <options> to show and hide their corresponding sections
@@ -499,6 +809,31 @@ function save(notifyComplete) {
     }
   }
 
+  if (data.action === 'deleteEntry') {
+    data.deleteConfirmDialog = !!$('#deleteConfirmDialog').is(':checked');
+    data.deleteMessage = $('#deleteMessage').val();
+    data.deleteConfirmLabel = $('#deleteConfirmLabel').val();
+    data.deleteCancelLabel = $('#deleteCancelLabel').val();
+
+  }
+
+  if (['email', 'telephone', 'chat'].includes(data.action)) {
+    const selectedCol = $('.lap-column-select').val();
+    if (!selectedCol) {
+      Fliplet.Widget.info(`Please select a valid column for ${data.action}.`);
+      return Promise.reject(`No valid ${data.action} column`);
+    }
+
+    // Persist column value in dynamicParameters with 'to' key
+    data.dynamicParameters = {
+      to: selectedCol
+    };
+  }
+
+  if (['nextSlide', 'previousSlide'].includes(data.action)) {
+    data.sliderId = lapContext.sliderId;
+  }
+
   // cleanup
   ['url', 'query', 'page'].forEach(function(key) {
     if (data[key] === '') {
@@ -599,5 +934,12 @@ Fliplet.Pages.get()
     return Promise.resolve();
   })
   .then(initializeData);
+
+$(function() {
+  getLapContext().then(function(context) {
+    lapContext = context;
+    filterAvailableActions(context);
+  });
+});
 
 Fliplet.Widget.autosize();

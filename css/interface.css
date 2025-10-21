@@ -99,3 +99,10 @@ section,
 .text-success {
   line-height: 1;
 }
+
+.lap-error-message, .chat-error-message {
+  color: #a94442;
+  font-size: 12px;
+  margin-top: 4px;
+  margin-bottom: 10px;
+}

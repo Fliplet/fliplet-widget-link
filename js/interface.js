@@ -44,6 +44,11 @@ var files = $.extend(widgetInstanceData.files, {
 
 var config = files;
 
+// Cache for data source info to avoid duplicate API calls
+var cachedDataSourceId = null;
+var cachedConnection = null;
+var cachedColumns = null;
+
 if (files.id) {
   config.selectFiles.push({
     appId: files.appId ? files.appId : undefined,
@@ -262,21 +267,42 @@ async function initLapColumnSelect($select) {
   if (!lapType) return;
 
   try {
+    // Show loading state with spinner
+    $select.prop('disabled', true);
+    $('.spinner-holder').addClass('animated');
+
     const parentDataSource = lapContext.parents.find(p => p.dataSourceId);
 
     if (!parentDataSource) {
-      $select.empty();
+      $select.empty().append('<option value="">No data source found</option>');
       $('#parentDataSourceDisplay').text('No data source found');
+      $select.prop('disabled', false);
+      $('.spinner-holder').removeClass('animated');
       return;
     }
 
     const parentDataSourceId = parentDataSource.dataSourceId;
     $('#parentDataSourceDisplay').text(`ID: ${parentDataSourceId}`);
 
-    // Connect and get datasource info
-    const connection = await Fliplet.DataSources.connect(parentDataSourceId);
-    const dataSource = await Fliplet.DataSources.getById(parentDataSourceId, { cache: false });
-    const columns = dataSource.columns || [];
+    let connection;
+    let columns;
+
+    // Check if we have cached data for this data source
+    if (cachedDataSourceId === parentDataSourceId && cachedColumns) {
+      // Use cached data
+      connection = cachedConnection;
+      columns = cachedColumns;
+    } else {
+      // Fetch fresh data and cache it
+      connection = await Fliplet.DataSources.connect(parentDataSourceId);
+      const dataSource = await Fliplet.DataSources.getById(parentDataSourceId, { cache: false });
+      columns = dataSource.columns || [];
+
+      // Store in cache
+      cachedDataSourceId = parentDataSourceId;
+      cachedConnection = connection;
+      cachedColumns = columns;
+    }
 
     // Populate dropdown
     $select.empty().append('<option value="">Select a column</option>');
@@ -292,6 +318,10 @@ async function initLapColumnSelect($select) {
     if (savedCol) {
       $select.val(savedCol);
     }
+
+    // Re-enable select after loading and hide spinner
+    $select.prop('disabled', false);
+    $('.spinner-holder').removeClass('animated');
 
     // Validation on change
     $select.off('change.lapValidation').on('change.lapValidation', async function() {
@@ -321,26 +351,41 @@ async function initLapColumnSelect($select) {
         // Remove any existing error for this select
         $select.next('.lap-error-message').remove();
 
+        // Error message from template and populate with lap type
+        const $errorTemplate = $('#lap-error-template');
+        const $errorMsg = $($errorTemplate.html());
+        $errorMsg.find('.lap-error-type').text(lapType);
+
         // Show inline error message
-        $select.after(
-          `<div class="lap-error-message" style="color:#d9534f; font-size:12px; margin-top:4px; margin-bottom:10px;">
-            The selected column does not contain valid ${lapType} data.
-          </div>`
-        );
+        $select.after($errorMsg);
+
+        // Add has-error class to parent form-group
+        $select.closest('.form-group').addClass('has-error');
+
         Fliplet.Widget.autosize();
 
         // Reset selection
         $select.val('');
+        Fliplet.Widget.toggleSaveButton(false);
       } else {
         // Clear error if validation passes
         $select.next('.lap-error-message').remove();
+
+        // Remove has-error class from parent form-group
+        $select.closest('.form-group').removeClass('has-error');
+
+        // For chat action, also check if screen validation passed
+        const hasChatScreenError = currentAction === 'chat' && $('#screen-list').hasClass('has-error');
+        Fliplet.Widget.toggleSaveButton(!hasChatScreenError);
       }
 
     });
   } catch (err) {
     console.error('Error fetching datasource columns:', err);
-    $select.empty();
+    $select.empty().append('<option value="">Error loading data source</option>');
     $('#parentDataSourceDisplay').text('Error loading data source');
+    $select.prop('disabled', false);
+    $('.spinner-holder').removeClass('animated');
   }
 }
 
@@ -351,9 +396,22 @@ $('#action').on('change', function() {
   if (['email', 'telephone', 'chat'].includes(selectedAction)) {
     $('.lap-column-select').each(function () {
       const $select = $(this);
-      $select.val('').trigger('change');
-      initLapColumnSelect($select);        
+
+      // Initialize the select with columns from data source
+      // initLapColumnSelect will restore saved value from widgetInstanceData
+      initLapColumnSelect($select).then(function () {
+        // Trigger validation on the restored value
+        $select.trigger('change');
+      });
     });
+  } else {
+    // Clear any LAP-related error messages when switching away from LAP actions
+    $('.lap-column-select').each(function () {
+      const $select = $(this);
+      $select.next('.lap-error-message').remove();
+      $select.closest('.form-group').removeClass('has-error');
+    });
+    Fliplet.Widget.toggleSaveButton(true);
   }
 });
 
@@ -492,17 +550,40 @@ function validateChatScreen(pageId) {
   });
 }
 
+// Helper function to show/hide chat error message
+function showChatError(errorText) {
+  const $pageSelect = $('#page');
+  const $selectProxy = $pageSelect.closest('.select-proxy-display');
+
+  // Remove any existing error
+  $selectProxy.next('.chat-error-message').remove();
+
+  if (errorText) {
+    // Clone error message from template and populate with error text
+    const $errorTemplate = $('#chat-error-template');
+    const $errorMsg = $($errorTemplate.html());
+    $errorMsg.find('.chat-error-text').text(errorText);
+
+    // Show inline error message after the select proxy wrapper
+    $selectProxy.after($errorMsg);
+    Fliplet.Widget.autosize();
+  }
+}
+
 function handleChatValidation(selectedAction, selectedPageId) {
   if (selectedAction !== 'chat') {
     $('#screen-list').removeClass('has-error');
+    showChatError(null);
     Fliplet.Widget.info('');
-    Fliplet.Widget.toggleSaveButton(true);
+    Fliplet.Widget.toggleSaveButton(!$('.lap-error-message').length);
     return;
   }
 
   if (!selectedPageId) {
-    Fliplet.Widget.info('Please select a screen.');
+    const errorMsg = 'Please select a screen.';
+    showChatError(errorMsg);
     $('#screen-list').addClass('has-error');
+    Fliplet.Widget.info(errorMsg);
     Fliplet.Widget.toggleSaveButton(false);
     return;
   }
@@ -510,12 +591,16 @@ function handleChatValidation(selectedAction, selectedPageId) {
   validateChatScreen(selectedPageId)
     .then(() => {
       $('#screen-list').removeClass('has-error');
+      showChatError(null);
       Fliplet.Widget.info('');
-      Fliplet.Widget.toggleSaveButton(true);
+      // Enable save only if no LAP column errors
+      Fliplet.Widget.toggleSaveButton(!$('.lap-error-message').length);
     })
     .catch(error => {
+      const errorMsg = error || 'The selected screen does not have a Chat widget.';
+      showChatError(errorMsg);
       $('#screen-list').addClass('has-error');
-      Fliplet.Widget.info(error || 'The selected screen does not have a Chat widget.');
+      Fliplet.Widget.info(errorMsg);
       Fliplet.Widget.toggleSaveButton(false);
     });
 }
@@ -892,6 +977,24 @@ function initializeData() {
       }
     }
 
+    // Initialize delete configuration fields
+    if (widgetInstanceData.action === 'deleteEntry') {
+      if (widgetInstanceData.deleteConfirmDialog) {
+        $('#deleteConfirmDialog').prop('checked', true);
+      }
+      if (widgetInstanceData.deleteMessage) {
+        $('#deleteMessage').val(widgetInstanceData.deleteMessage);
+      }
+      if (widgetInstanceData.deleteConfirmLabel) {
+        $('#deleteConfirmLabel').val(widgetInstanceData.deleteConfirmLabel);
+      }
+      if (widgetInstanceData.deleteCancelLabel) {
+        $('#deleteCancelLabel').val(widgetInstanceData.deleteCancelLabel);
+      }
+      // Trigger change to show/hide fields based on checkbox state
+      $('#deleteConfirmDialog').trigger('change');
+    }
+
     $('.spinner-holder').removeClass('animated');
 
     if (selectDefaultPage) {
@@ -909,8 +1012,15 @@ function initializeData() {
   }
 }
 
-Fliplet.Pages.get()
-  .then(function(pages) {
+  Promise.all([
+    Fliplet.Pages.get(),
+    getLapContext()
+  ]).then(function([pages, context]) {
+    // Store context globally and filter available actions
+    lapContext = context;
+    filterAvailableActions(context);
+
+    // Populate pages dropdown
     var $select = $('#page');
 
     (pages || []).forEach(function(page) {
@@ -931,15 +1041,9 @@ Fliplet.Pages.get()
       );
     });
 
+  // Initialize data with lapContext guaranteed to be available
     return Promise.resolve();
   })
   .then(initializeData);
-
-$(function() {
-  getLapContext().then(function(context) {
-    lapContext = context;
-    filterAvailableActions(context);
-  });
-});
 
 Fliplet.Widget.autosize();

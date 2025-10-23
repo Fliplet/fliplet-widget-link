@@ -444,7 +444,13 @@ function onActionChange() {
   } else if (selectedAction === 'deleteEntry') {
     $('#pageLabel').text('Select a screen to take user after');
   } else {
-    $('#pageLabel').text('Select a screen');
+    let label = 'Select a screen';
+
+    if (widgetInstanceData.options && widgetInstanceData.options.pageRequired) {
+      label += ' (Required)';
+    }
+
+    $('#pageLabel').text(label);
   }
 
   showSection(selectedAction, selectId);

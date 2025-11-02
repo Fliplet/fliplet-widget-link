@@ -170,7 +170,7 @@ function onActionChange() {
   var selectId = $element.attr('id');
 
   // this is used to clear uploaded file if user changes link type
-  if (!_.isEmpty(files.selectedFiles) || (selectedAction === 'document' && fileType !== 'application') || (selectedAction === 'video' && fileType !== 'video')) {
+  if (!Fliplet.Utils.isEmpty(files.selectedFiles) || (selectedAction === 'document' && fileType !== 'application') || (selectedAction === 'video' && fileType !== 'video')) {
     clearUploadedFiles();
   }
 
@@ -453,9 +453,9 @@ function save(notifyComplete) {
 
       // All recipients are found in the "emailProviderData.to" array, but with "type"
       // defining whether they are "to" or "cc" or "bcc" recipients.
-      data.appData.to = _.find(emailProviderData.to, function(o) { return o.type === 'to'; }) || '';
-      data.appData.cc = _.find(emailProviderData.to, function(o) { return o.type === 'cc'; }) || '';
-      data.appData.bcc = _.find(emailProviderData.to, function(o) { return o.type === 'bcc'; }) || '';
+      data.appData.to = Fliplet.Utils.find(emailProviderData.to, function(o) { return o.type === 'to'; }) || '';
+      data.appData.cc = Fliplet.Utils.find(emailProviderData.to, function(o) { return o.type === 'cc'; }) || '';
+      data.appData.bcc = Fliplet.Utils.find(emailProviderData.to, function(o) { return o.type === 'bcc'; }) || '';
     } else if (data.app === 'googlechrome.website') {
       data.appData.url = $('#' + externalAppValueMap[appAction]).val();
     } else {
@@ -495,7 +495,7 @@ function save(notifyComplete) {
     if (files.toRemove) {
       data.files = {};
     } else {
-      data.files = _.isEmpty(files.selectedFiles) ? files : files.selectedFiles;
+      data.files = Fliplet.Utils.isEmpty(files.selectedFiles) ? files : files.selectedFiles;
     }
   }
 
@@ -579,7 +579,7 @@ Fliplet.Pages.get()
     var $select = $('#page');
 
     (pages || []).forEach(function(page) {
-      var pageIsOmitted = _.some(widgetInstanceData.omitPages, function(omittedPage) {
+      var pageIsOmitted = Fliplet.Utils.some(widgetInstanceData.omitPages, function(omittedPage) {
         return omittedPage === page.id;
       });
 

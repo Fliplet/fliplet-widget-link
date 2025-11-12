@@ -999,6 +999,22 @@ function initializeData() {
       $('#showConfirmationMessage').trigger('change');
     }
 
+    // Validate action context after loading data
+    getLapContext().then(function(context) {
+      filterAvailableActions(context);
+      const currentAction = $('#action').val() || widgetInstanceData.action;
+      if (currentAction && currentAction !== 'none') {
+        const allowedContexts = actionContextMap[currentAction] || [];
+        const isValid = allowedContexts.includes('any') ||
+          (allowedContexts.includes('dataContainer') && context.inDataContainer) ||
+          (allowedContexts.includes('slideContainer') && context.inSlideContainer);
+        
+        if (!isValid) {
+          $('#action').val('none').trigger('change');
+        }
+      }
+    });
+    
     if (!['email', 'telephone', 'chat'].includes(widgetInstanceData.action)) {
       $('.spinner-holder').removeClass('animated');
     }

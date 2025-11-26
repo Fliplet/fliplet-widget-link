@@ -159,82 +159,44 @@ $(window).on('resize', Fliplet.Widget.autosize);
 function getLapContext() {
   if (Fliplet.Env.get('development') === true) {
     return {
-      inSlide: false,
-      inSlider: false,
       inSlideContainer: false,
-      sliderId: null,
-      parents: []
+      sliderId: null
     };
   }
 
   return Fliplet.Widget.findParents({
     isProvider: true
   }).then(function(parents) {
-    const context = {
-      inSlide: false,
-      inSlider: false,
-      inSlideContainer: false,
-      sliderId: null,
-      parents
-    };
+    var hasSlide = false;
+    var sliderId = null;
 
     parents.forEach(function(parent) {
-      //  Detect Slide
       if (parent.package === 'com.fliplet.slide') {
-        context.inSlide = true;
+        hasSlide = true;
       }
 
-      //  Detect Slider container
       if (parent.package === 'com.fliplet.slider-container') {
-        context.inSlider = true;
-        context.sliderId = parent.id;
+        sliderId = parent.id;
       }
     });
 
-    //  Mark combined condition
-    if (context.inSlide && context.inSlider) {
-      context.inSlideContainer = true;
-    }
-
-    return context;
+    return {
+      inSlideContainer: hasSlide && sliderId !== null,
+      sliderId: sliderId
+    };
   });
 }
 
 
-const actionContextMap = {
-  nextSlide: ['slideContainer'],
-  previousSlide: ['slideContainer'],
-  screen: ['any'],
-  url: ['any'],
-  document: ['any'],
-  video: ['any'],
-  app: ['any'],
-  logout: ['any'],
-  runFunction: ['any'],
-  back: ['any'],
-  'exit-app': ['any'],
-  'about-overlay': ['any'],
-  none: ['any']
-};
-
-
 function filterAvailableActions(context) {
+  var slideActions = ['nextSlide', 'previousSlide'];
+
   $('#action option').each(function() {
-    const $option = $(this);
-    const value = $option.attr('value');
-    const allowedContexts = actionContextMap[value] || [];
+    var $option = $(this);
+    var value = $option.attr('value');
 
-    let isAllowed = false;
-
-    if (allowedContexts.includes('any')) {
-      isAllowed = true;
-    }
-
-    if (allowedContexts.includes('slideContainer') && context.inSlideContainer) {
-      isAllowed = true;
-    }
-
-    if (!isAllowed) {
+    // Hide slide actions if not in a slide container
+    if (slideActions.indexOf(value) !== -1 && !context.inSlideContainer) {
       $option.hide();
     } else {
       $option.show();
@@ -246,12 +208,7 @@ function filterAvailableActions(context) {
 This is important for cases when we have a dropdown with additional sections on the inner levels (i.e logout) */
 function showSection(sectionDataKey, selectId) {
   optionsValues[selectId].forEach(function(key) {
-    if ($sections[key]) {
-      // Check if the section’s data-key contains the selected action
-      var keys = $sections[key].data('key').split(/\s+/);
-
-      $sections[key].toggleClass('show', keys.includes(sectionDataKey));
-    }
+    $sections[key] && $sections[key].toggleClass('show', key === sectionDataKey);
   });
 }
 
@@ -265,14 +222,6 @@ function onActionChange() {
   if (!_.isEmpty(files.selectedFiles) || (selectedAction === 'document' && fileType !== 'application') || (selectedAction === 'video' && fileType !== 'video')) {
     clearUploadedFiles();
   }
-
-  let label = 'Select a screen';
-
-  if (widgetInstanceData.options && widgetInstanceData.options.pageRequired) {
-    label += ' (Required)';
-  }
-
-  $('#pageLabel').text(label);
 
   showSection(selectedAction, selectId);
 
@@ -367,11 +316,9 @@ $appAction.on('change', function onAppActionChange() {
    Each <section> element is hidden by css and connected through [data-key] attribute with specific <option> by value. */
 $('section').each(function(index, element) {
   var $section = $(element);
-  var sectionDataKeys = $section.data('key').split(/\s+/);
+  var sectionDataKey = $section.data('key');
 
-  sectionDataKeys.forEach(function(key) {
-    $sections[key] = $section;
-  });
+  $sections[sectionDataKey] = $section;
 });
 
 // Caching and grouping all <options> to show and hide their corresponding sections

@@ -99,33 +99,3 @@ section,
 .text-success {
   line-height: 1;
 }
-
-.lap-alert-error {
-  color: #a94442;
-  font-size: 12px;
-  margin-top: 4px;
-  margin-bottom: 10px;
-}
-
-.checkbox.checkbox-icon input[type="checkbox"] {
-  z-index: -1;
-  position: absolute;
-  margin: 0;
-  width: 28px;
-  height: 28px;
-  opacity: 0;
-  background: black;
-  display: block;
-}
-
-.checkbox.checkbox-icon input[type="checkbox"] + label {
-  padding-left: 28px;
-}
-
-.help-text {
-  font-weight: 400;
-  font-size: 12px;
-  line-height: 16px;
-  padding-top: 8px;
-  color: #737373;
-}

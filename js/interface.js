@@ -44,12 +44,6 @@ var files = $.extend(widgetInstanceData.files, {
 
 var config = files;
 
-// Cache for data source info to avoid duplicate API calls
-var cachedDataSourceId = null;
-var cachedDataSourceName = null;
-var cachedColumns = null;
-var cachedRecords = null;
-
 if (files.id) {
   config.selectFiles.push({
     appId: files.appId ? files.appId : undefined,
@@ -165,7 +159,6 @@ $(window).on('resize', Fliplet.Widget.autosize);
 function getLapContext() {
   if (Fliplet.Env.get('development') === true) {
     return {
-      inDataContainer: true,
       inSlide: false,
       inSlider: false,
       inSlideContainer: false,
@@ -178,7 +171,6 @@ function getLapContext() {
     isProvider: true
   }).then(function(parents) {
     const context = {
-      inDataContainer: false,
       inSlide: false,
       inSlider: false,
       inSlideContainer: false,
@@ -187,12 +179,6 @@ function getLapContext() {
     };
 
     parents.forEach(function(parent) {
-      //  Detect Data Container (record-container / list-repeater)
-      if (parent.package === 'com.fliplet.record-container'
-        || parent.package === 'com.fliplet.list-repeater') {
-        context.inDataContainer = true;
-      }
-
       //  Detect Slide
       if (parent.package === 'com.fliplet.slide') {
         context.inSlide = true;
@@ -216,12 +202,6 @@ function getLapContext() {
 
 
 const actionContextMap = {
-  addEntry: ['dataContainer'],
-  editEntry: ['dataContainer'],
-  deleteEntry: ['dataContainer'],
-  email: ['dataContainer'],
-  telephone: ['dataContainer'],
-  chat: ['dataContainer'],
   nextSlide: ['slideContainer'],
   previousSlide: ['slideContainer'],
   screen: ['any'],
@@ -250,10 +230,6 @@ function filterAvailableActions(context) {
       isAllowed = true;
     }
 
-    if (allowedContexts.includes('dataContainer') && context.inDataContainer) {
-      isAllowed = true;
-    }
-
     if (allowedContexts.includes('slideContainer') && context.inSlideContainer) {
       isAllowed = true;
     }
@@ -264,155 +240,6 @@ function filterAvailableActions(context) {
       $option.show();
     }
   });
-}
-
-// Initialize LAP column select with dynamic validation
-async function initLapColumnSelect() {
-  // Get current lap type dynamically based on selected Link Action
-  const currentAction = $('#action').val();
-
-  const $select = $('.lap-column-select');
-
-  $select.next('#column-error-message').addClass('hidden');
-  $select.closest('.form-group').removeClass('has-error');
-
-  if (!['chat', 'email', 'telephone'].includes(currentAction)) {
-    return;
-  }
-
-  try {
-    // Show loading state with spinner
-    $select.prop('disabled', true);
-    $('.spinner-holder').addClass('animated');
-
-    const parentDataSource = lapContext.parents.find(p => p.dataSourceId);
-
-    if (!parentDataSource) {
-      $select.empty().append('<option value="">No data source found</option>');
-      $('#missingDataSource').removeClass('hidden');
-      $select.prop('disabled', false);
-      $('.spinner-holder').removeClass('animated');
-
-      return;
-    }
-
-    const parentDataSourceId = parentDataSource.dataSourceId;
-
-
-    let connection;
-    let columns;
-
-    // Check if we have cached data for this data source
-    if (cachedDataSourceId === parentDataSourceId && cachedColumns) {
-      // Use cached data
-      columns = cachedColumns;
-    } else {
-      // Fetch fresh data and cache it
-      connection = await Fliplet.DataSources.connect(parentDataSourceId);
-
-      const [records, dataSource] = await Promise.all([
-        connection.find({ limit: 10 }),
-        Fliplet.DataSources.getById(parentDataSourceId, { cache: false })
-      ]);
-
-      columns = dataSource.columns || [];
-
-      // Store in cache
-      cachedDataSourceId = parentDataSourceId;
-      cachedDataSourceName = dataSource.name;
-      cachedColumns = columns;
-      cachedRecords = records;
-    }
-
-    $('#dataSourceDetails').removeClass('hidden');
-    $('#missingDataSource').addClass('hidden');
-    $('#dataSourceDetails > code').text(cachedDataSourceId);
-    $('#dataSourceDetails > span').text(cachedDataSourceName);
-    // Populate dropdown
-    $select.empty().append('<option value="">Select a column</option>');
-    columns.forEach(col => {
-      if (typeof col === 'string') {
-        $select.append(`<option value="${col}">${col}</option>`);
-      } else {
-        $select.append(`<option value="${col.key}">${col.name}</option>`);
-      }
-    });
-
-    const savedCol = widgetInstanceData.dynamicParameters && widgetInstanceData.dynamicParameters.to;
-
-    if (savedCol) {
-      $select.val(savedCol);
-    }
-
-    // Re-enable select after loading and hide spinner
-    $select.prop('disabled', false);
-    $('.spinner-holder').removeClass('animated');
-
-    // Validation on change
-    $select.off('change.lapValidation').on('change.lapValidation', async function() {
-      const selectedKey = $(this).val();
-
-      if (!selectedKey) return;
-
-      // Re-read current Link Action for dynamic validation
-      const currentAction = $('#action').val();
-      let columnType = '';
-
-      if (currentAction === 'email' || currentAction === 'chat') {
-        columnType = 'email';
-      } else if (currentAction === 'telephone') {
-        columnType = 'telephone';
-      }
-
-      const sampleRecords = cachedRecords;
-      const invalid = sampleRecords.some(record => {
-        const value = record.data[selectedKey];
-
-        if (columnType === 'email') {
-          return value && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-        }
-
-        if (columnType === 'telephone') {
-          return value && !/^\+?[0-9\-\s()]{6,20}$/.test(value);
-        }
-
-        return false;
-      });
-
-      if (invalid) {
-        // Show error message and populate with lap type
-        const $errorMsg = $select.next('#column-error-message');
-
-        $errorMsg.find('.lap-error-type').text(columnType);
-        $errorMsg.removeClass('hidden');
-
-        // Add has-error class to parent form-group
-        $select.closest('.form-group').addClass('has-error');
-
-        Fliplet.Widget.autosize();
-
-        Fliplet.Widget.toggleSaveButton(false);
-      } else {
-        // Hide error if validation passes
-        $select.next('#column-error-message').addClass('hidden');
-
-        // Remove has-error class from parent form-group
-        $select.closest('.form-group').removeClass('has-error');
-
-        // For chat action, also check if screen validation passed
-        const hasChatScreenError = currentAction === 'chat' && $('#screen-list').hasClass('has-error');
-
-        Fliplet.Widget.toggleSaveButton(!hasChatScreenError);
-      }
-    });
-  } catch (err) {
-    console.error('Error fetching datasource columns:', err);
-    $select.empty().append('<option value="">Error loading data source</option>');
-    $('#missingDataSource').text('Error loading data source');
-    $('#missingDataSource').removeClass('hidden');
-    $select.prop('disabled', false);
-    $('.spinner-holder').removeClass('animated');
-  }
 }
 
 /* Show/hide toggle function for sections on the same level.
@@ -439,28 +266,15 @@ function onActionChange() {
     clearUploadedFiles();
   }
 
-  if (selectedAction === 'addEntry' || selectedAction === 'editEntry') {
-    $('#pageLabel').text('Select a screen with a form');
-  } else if (selectedAction === 'deleteEntry') {
-    $('#pageLabel').text('Select a screen to take user after');
-  } else {
-    let label = 'Select a screen';
+  let label = 'Select a screen';
 
-    if (widgetInstanceData.options && widgetInstanceData.options.pageRequired) {
-      label += ' (Required)';
-    }
-
-    $('#pageLabel').text(label);
+  if (widgetInstanceData.options && widgetInstanceData.options.pageRequired) {
+    label += ' (Required)';
   }
+
+  $('#pageLabel').text(label);
 
   showSection(selectedAction, selectId);
-
-  // Toggle delete-only fields
-  if (selectedAction === 'deleteEntry') {
-    $('#delete-fields').removeClass('hidden');
-  } else {
-    $('#delete-fields').addClass('hidden');
-  }
 
   if (selectedAction === 'logout') {
     $('#logoutAction').trigger('change');
@@ -477,17 +291,6 @@ function onActionChange() {
     if (widgetInstanceData.variables && widgetInstanceData.variables.length) {
       $('#showVariables').removeClass('hidden');
     }
-  }
-
-  // Handle chat validation when action changes
-  const selectedPageId = Number($('#page').val());
-
-  handleChatValidation(selectedAction, selectedPageId);
-
-  if (['email', 'telephone', 'chat'].includes(selectedAction)) {
-    initLapColumnSelect();
-  } else {
-    Fliplet.Widget.toggleSaveButton(true);
   }
 
   Fliplet.Studio.emit('widget-changed');
@@ -530,84 +333,6 @@ function clearVariables() {
   $('#availableVariables').empty();
 }
 
-function validateChatScreen(pageId) {
-  return Fliplet.API.request({
-    method: 'GET',
-    url: `v1/widget-instances/?pageId=${pageId}`
-  }).then(function(response) {
-    const widgets = response.widgetInstances || [];
-
-    // Filter instances that have package === 'com.fliplet.chat' in settings
-    const chatWidgets = widgets.filter(wi => {
-      const settings = wi.settings || {};
-      const pkg = settings.package || '';
-
-      return pkg.trim() === 'com.fliplet.chat';
-    });
-
-    if (chatWidgets.length > 0) {
-      return Promise.resolve(); // Valid chat screen
-    }
-
-    return Promise.reject('Please select a screen that contains a Chat widget.');
-  }).catch(function() {
-    return Promise.reject('Chat not available on selected screen');
-  });
-}
-
-// Helper function to show/hide chat error message
-function showChatError(errorText) {
-  const $errorMsg = $('#chat-error-message');
-
-  if (errorText) {
-    // Populate and show error message
-    $errorMsg.find('span').text(errorText);
-    $errorMsg.removeClass('hidden');
-    Fliplet.Widget.autosize();
-  } else {
-    // Hide error message
-    $errorMsg.addClass('hidden');
-  }
-}
-
-function handleChatValidation(selectedAction, selectedPageId, isPageChange) {
-  if (selectedAction !== 'chat') {
-    $('#screen-list').removeClass('has-error');
-    showChatError(null);
-    Fliplet.Widget.toggleSaveButton(!$('#column-error-message:not(.hidden)').length);
-
-    return;
-  }
-
-  if (!selectedPageId) {
-    if (isPageChange) {
-      const errorMsg = 'Please select a screen.';
-
-      showChatError(errorMsg);
-      $('#screen-list').addClass('has-error');
-    }
-
-    Fliplet.Widget.toggleSaveButton(false);
-
-    return;
-  }
-
-  validateChatScreen(selectedPageId)
-    .then(() => {
-      $('#screen-list').removeClass('has-error');
-      showChatError(null);
-      // Enable save only if no LAP column errors
-      Fliplet.Widget.toggleSaveButton(!$('#column-error-message:not(.hidden)').length);
-    })
-    .catch(error => {
-      const errorMsg = error || 'The selected screen does not have a Chat widget.';
-
-      showChatError(errorMsg);
-      $('#screen-list').addClass('has-error');
-      Fliplet.Widget.toggleSaveButton(false);
-    });
-}
-
 $('#showVariables').on('click', function() {
   $(this).addClass('hidden');
   $('#hideVariables').removeClass('hidden');
@@ -617,20 +342,6 @@ $('#showVariables').on('click', function() {
 
   Fliplet.Widget.autosize();
 });
-
-$('#showConfirmationMessage').on('change', function() {
-  const $fields = $('#confirmMessage, #confirmLabel, #cancelLabel')
-    .closest('.form-group');
-
-  if ($(this).is(':checked')) {
-    $fields.show();
-  } else {
-    $fields.hide();
-  }
-
-  Fliplet.Widget.autosize();
-}).trigger('change');
-
 
 $('#hideVariables').on('click', function() {
   $(this).addClass('hidden');
@@ -720,11 +431,6 @@ $('.video-remove').on('click', function() {
   Fliplet.Widget.autosize();
 });
 $('#page').on('change', function() {
-  const selectedPageId = Number($(this).val());
-  const selectedAction = $('#action').val();
-
-  handleChatValidation(selectedAction, selectedPageId, true);
-
   Fliplet.Widget.emit('onPageChange', $(this).val());
 });
 
@@ -895,26 +601,6 @@ function save(notifyComplete) {
     }
   }
 
-  if (data.action === 'deleteEntry') {
-    data.showConfirmationMessage = !!$('#showConfirmationMessage').is(':checked');
-    data.confirmMessage = $('#confirmMessage').val();
-    data.confirmLabel = $('#confirmLabel').val();
-    data.cancelLabel = $('#cancelLabel').val();
-  }
-
-  if (['email', 'telephone', 'chat'].includes(data.action)) {
-    const selectedCol = $('.lap-column-select').val();
-
-    if (!selectedCol) {
-      return Promise.reject(`No valid ${data.action} column`);
-    }
-
-    // Persist column value in dynamicParameters with 'to' key
-    data.dynamicParameters = {
-      to: selectedCol
-    };
-  }
-
   if (['nextSlide', 'previousSlide'].includes(data.action)) {
     data.sliderId = lapContext.sliderId;
   }
@@ -975,32 +661,6 @@ function initializeData() {
       if (widgetInstanceData.appData && url) {
         $('#' + externalAppValueMap[widgetInstanceData.app]).val(url);
       }
-    }
-
-    // Initialize delete configuration fields
-    if (widgetInstanceData.action === 'deleteEntry') {
-      if (widgetInstanceData.showConfirmationMessage) {
-        $('#showConfirmationMessage').prop('checked', true);
-      }
-
-      if (widgetInstanceData.confirmMessage) {
-        $('#confirmMessage').val(widgetInstanceData.confirmMessage);
-      }
-
-      if (widgetInstanceData.confirmLabel) {
-        $('#confirmLabel').val(widgetInstanceData.confirmLabel);
-      }
-
-      if (widgetInstanceData.cancelLabel) {
-        $('#cancelLabel').val(widgetInstanceData.cancelLabel);
-      }
-
-      // Trigger change to show/hide fields based on checkbox state
-      $('#showConfirmationMessage').trigger('change');
-    }
-
-    if (!['email', 'telephone', 'chat'].includes(widgetInstanceData.action)) {
-      $('.spinner-holder').removeClass('animated');
     }
 
     if (selectDefaultPage) {

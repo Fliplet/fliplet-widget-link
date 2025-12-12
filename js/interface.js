@@ -567,6 +567,10 @@ function save(notifyComplete) {
     delete data['functionStr'];
   }
 
+  if (!['nextSlide', 'previousSlide'].includes(data.action)) {
+    delete data['sliderId'];
+  }
+
   if (notifyComplete) {
     // TODO: validate query
     Fliplet.Widget.save(data).then(function() {
@@ -581,6 +585,26 @@ function save(notifyComplete) {
 
 function initializeData() {
   if (widgetInstanceData.action) {
+    // Validate slider actions - check if the saved sliderId matches the current context
+    var isSliderAction = ['nextSlide', 'previousSlide'].includes(widgetInstanceData.action);
+    var sliderIdMismatch = isSliderAction && widgetInstanceData.sliderId !== lapContext.sliderId;
+
+    // If slider action but sliderId doesn't match current context, clean the invalid data
+    if (sliderIdMismatch) {
+      // Clear invalid slider action data to treat as truly unconfigured
+      delete widgetInstanceData.action;
+      delete widgetInstanceData.sliderId;
+
+      $('.spinner-holder').removeClass('animated');
+      $('#transition').val(defaultTransitionVal).trigger('change');
+
+      if (selectDefaultPage) {
+        $('#page').val('none');
+      }
+
+      return;
+    }
+
     fields.forEach(function(fieldId) {
       // skipping "change" event on the inner sections selects to prevent hide of the top level sections
       if (fieldId === 'logoutAction') {

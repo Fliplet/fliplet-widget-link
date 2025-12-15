@@ -18,7 +18,7 @@ var fields = [
   'functionStr'
 ];
 
-var slideActions = ['nextSlide', 'previousSlide'];
+var slideActions = ['next-slide', 'previous-slide'];
 
 var btnSelector = {
   document: '.add-document',
@@ -159,14 +159,22 @@ Object.keys(btnSelector).forEach(function(key) {
 $(window).on('resize', Fliplet.Widget.autosize);
 
 function getLapContext() {
+  var defaultContext = {
+    inSlideContainer: false,
+    sliderUuid: null
+  };
+
   if (Fliplet.Env.get('development') === true) {
-    return {
-      inSlideContainer: false,
-      sliderUuid: null
-    };
+    return defaultContext;
   }
 
-  return Fliplet.Widget.findParents({
+  var timeoutPromise = new Promise(function(resolve) {
+    setTimeout(function() {
+      resolve(defaultContext);
+    }, 5000);
+  });
+
+  var findParentsPromise = Fliplet.Widget.findParents({
     isProvider: true
   }).then(function(parents) {
     var hasSlide = false;
@@ -187,6 +195,9 @@ function getLapContext() {
       sliderUuid: sliderUuid
     };
   });
+
+  // Ensure findParents promise does not hang indefinitely.
+  return Promise.race([findParentsPromise, timeoutPromise]);
 }
 
 
@@ -195,8 +206,8 @@ function filterAvailableActions(context) {
     var $option = $(this);
     var value = $option.attr('value');
 
-    // Hide slide actions if not in a slide container
-    if (slideActions.indexOf(value) !== -1 && !context.inSlideContainer) {
+    // Hide slide actions if not in a slide container and not a form in slide
+    if (slideActions.indexOf(value) !== -1 && !context.inSlideContainer && !widgetInstanceData.isFormInSlide) {
       $option.hide();
     } else {
       $option.show();
@@ -549,7 +560,7 @@ function save(notifyComplete) {
     }
   }
 
-  if (['nextSlide', 'previousSlide'].includes(data.action)) {
+  if (slideActions.includes(data.action)) {
     data.sliderUuid = lapContext.sliderUuid;
   }
 

@@ -597,12 +597,18 @@ function initializeData() {
     var isSliderAction = slideActions.indexOf(widgetInstanceData.action) !== -1;
 
     if (isSliderAction) {
-      if (!lapContext.inSlideContainer) {
+      var isOutsideSlideContainer = !lapContext.inSlideContainer;
+      var isWrongSliderUuid = widgetInstanceData.sliderUuid
+        && widgetInstanceData.sliderUuid !== lapContext.sliderUuid;
+      var shouldResetAction = isOutsideSlideContainer || isWrongSliderUuid;
+
+      if (shouldResetAction) {
         widgetInstanceData.action = 'none';
         delete widgetInstanceData.sliderUuid;
-      } else if (widgetInstanceData.sliderUuid && widgetInstanceData.sliderUuid !== lapContext.sliderUuid) {
-        // Slider context has changed - update to current slider
-        widgetInstanceData.sliderUuid = lapContext.sliderUuid;
+
+        if (!widgetInstanceData.isFormInSlide) {
+          save();
+        }
       }
     }
 

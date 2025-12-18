@@ -5,6 +5,7 @@ var defaultTransitionVal = 'fade';
 var selectDefaultPage = true;
 var $sections = {};
 var optionsValues = {};
+var lapContext;
 
 var fields = [
   'linkLabel',
@@ -16,6 +17,8 @@ var fields = [
   'query',
   'functionStr'
 ];
+
+var slideActions = ['next-slide', 'previous-slide'];
 
 var btnSelector = {
   document: '.add-document',
@@ -154,6 +157,63 @@ Object.keys(btnSelector).forEach(function(key) {
 });
 
 $(window).on('resize', Fliplet.Widget.autosize);
+
+function getLapContext() {
+  var defaultContext = {
+    inSlideContainer: false,
+    sliderUuid: null
+  };
+
+  if (Fliplet.Env.get('development') === true) {
+    return defaultContext;
+  }
+
+  var timeoutPromise = new Promise(function(resolve) {
+    setTimeout(function() {
+      resolve(defaultContext);
+    }, 5000);
+  });
+
+  var findParentsPromise = Fliplet.Widget.findParents({
+    isProvider: true
+  }).then(function(parents) {
+    var hasSlide = false;
+    var sliderUuid = null;
+
+    parents.forEach(function(parent) {
+      if (parent.package === 'com.fliplet.slide') {
+        hasSlide = true;
+      }
+
+      if (parent.package === 'com.fliplet.slider-container') {
+        sliderUuid = parent.uuid;
+      }
+    });
+
+    return {
+      inSlideContainer: hasSlide && sliderUuid !== null,
+      sliderUuid: sliderUuid
+    };
+  });
+
+  // Ensure findParents promise does not hang indefinitely.
+  return Promise.race([findParentsPromise, timeoutPromise]);
+}
+
+
+function filterAvailableActions(context) {
+  $('#action option').each(function() {
+    var $option = $(this);
+    var value = $option.attr('value');
+
+    // Hide slide actions if not in a slide container and not a form in slide
+    if (slideActions.indexOf(value) !== -1 && !context.inSlideContainer && !widgetInstanceData.isFormInSlide) {
+      $option.hide();
+    } else {
+      $option.show();
+    }
+  });
+}
 
 /* Show/hide toggle function for sections on the same level.
 This is important for cases when we have a dropdown with additional sections on the inner levels (i.e logout) */
@@ -434,6 +494,7 @@ function save(notifyComplete) {
 
   // Attach options from widgetInstanceData
   data.options = widgetInstanceData.options;
+  data.isFormInSlide = widgetInstanceData.isFormInSlide;
 
   // Get and save values to data
   fields.forEach(function(fieldId) {
@@ -499,6 +560,10 @@ function save(notifyComplete) {
     }
   }
 
+  if (slideActions.includes(data.action)) {
+    data.sliderUuid = lapContext.sliderUuid;
+  }
+
   // cleanup
   ['url', 'query', 'page'].forEach(function(key) {
     if (data[key] === '') {
@@ -528,6 +593,19 @@ function save(notifyComplete) {
 
 function initializeData() {
   if (widgetInstanceData.action) {
+    // Validate slider-related actions
+    var isSliderAction = slideActions.indexOf(widgetInstanceData.action) !== -1;
+
+    if (isSliderAction) {
+      if (!lapContext.inSlideContainer) {
+        widgetInstanceData.action = 'none';
+        delete widgetInstanceData.sliderUuid;
+      } else if (widgetInstanceData.sliderUuid && widgetInstanceData.sliderUuid !== lapContext.sliderUuid) {
+        // Slider context has changed - update to current slider
+        widgetInstanceData.sliderUuid = lapContext.sliderUuid;
+      }
+    }
+
     fields.forEach(function(fieldId) {
       // skipping "change" event on the inner sections selects to prevent hide of the top level sections
       if (fieldId === 'logoutAction') {
@@ -574,30 +652,35 @@ function initializeData() {
   }
 }
 
-Fliplet.Pages.get()
-  .then(function(pages) {
-    var $select = $('#page');
+Promise.all([
+  Fliplet.Pages.get(),
+  getLapContext()
+]).then(function([pages, context]) {
+  lapContext = context;
+  filterAvailableActions(context);
 
-    (pages || []).forEach(function(page) {
-      var pageIsOmitted = _.some(widgetInstanceData.omitPages, function(omittedPage) {
-        return omittedPage === page.id;
-      });
+  var $select = $('#page');
 
-      if (pageIsOmitted) {
-        return;
-      }
-
-      if (widgetInstanceData.page) {
-        selectDefaultPage = false;
-      }
-
-      $select.append(
-        `<option value="${page.id}"${widgetInstanceData.page === page.id.toString() ? ' selected' : ''}>${page.title}</option>`
-      );
+  (pages || []).forEach(function(page) {
+    var pageIsOmitted = _.some(widgetInstanceData.omitPages, function(omittedPage) {
+      return omittedPage === page.id;
     });
 
-    return Promise.resolve();
-  })
+    if (pageIsOmitted) {
+      return;
+    }
+
+    if (widgetInstanceData.page) {
+      selectDefaultPage = false;
+    }
+
+    $select.append(
+      `<option value="${page.id}"${widgetInstanceData.page === page.id.toString() ? ' selected' : ''}>${page.title}</option>`
+    );
+  });
+
+  return Promise.resolve();
+})
   .then(initializeData);
 
 Fliplet.Widget.autosize();
